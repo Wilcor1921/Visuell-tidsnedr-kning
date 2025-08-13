@@ -68,7 +68,7 @@ body {
   height: 20px;
   border-radius: 50%;
   background: grey;
-  transition: background 0.6s ease; /* mjukare */
+  transition: background 0.5s;
 }
 .fullscreen-mode {
   background: var(--bg);
@@ -188,12 +188,9 @@ function renderLamps(activeCount=lamps) {
   for (let i = 0; i < lamps; i++) {
     let div = document.createElement('div');
     div.className = 'lamp';
-    div.style.transitionDelay = `${i * 0.05}s`; // liten fördröjning
     div.style.background = i < activeCount ? lampColor(i) : '#333';
     wrap.appendChild(div);
   }
-}
-
 }
 function startPreviewOnce() {
   renderLamps();

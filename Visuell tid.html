@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  <title>Visuell Tidsnedräknare</title>
+  <style>
+    :root{
+      --bg:#111315;
+      --panel:#1b1e21;
+      --panel-2:#1a1d20dd;
+      --text:#e7e9ea;
+      --muted:#a7adb3;
+      --accent:#34d399;
+      --border:#2b2f33;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:var(--bg); color:var(--text);
+      display:flex; align-items:center; justify-content:center;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .container{width:100%; max-width:1280px; padding:24px}
+    .grid{display:grid; grid-template-columns:1fr; gap:24px}
+    @media (min-width:1100px){ .grid{ grid-template-columns: 1fr 2fr; } }
+    .card{background:var(--panel-2); border:1px solid var(--border); border-radius:16px; padding:20px; box-shadow:0 10px 30px rgba(0,0,0,.25); backdrop-filter: blur(6px);}
+    h1{font-size:20px; margin:0 0 4px 0}
+    .sub{color:var(--muted); font-size:13px; margin-bottom:16px}
+    label{font-size:13px; display:block; margin-bottom:6px}
+    input[type=range]{width:100%}
+    input[type=number]{width:100px; padding:8px 10px; background:#0e1011; color:var(--text); border:1px solid var(--border); border-radius:10px}
+    .row{display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap}
+    .hint{color:#93a1a1; font-size:12px}
+    .btn{cursor:pointer; padding:12px 16px; border-radius:12px; border:1px solid transparent; font-weight:600}
+    .btn.primary{background:var(--accent); color:#0b0f10}
+    .btn.light{background:#e5e7eb; color:#0b0f10}
+    .btn.ghost{background:#2b2f33; color:var(--text); border-color:#3a3f44}
+    .grid-lamps{display:grid; gap:8px}
+    .lamp{height:56px; border-radius:12px; transition: all .25s ease; box-shadow: inset 0 0 0 1px rgba(255,255,255,.45), 0 8px 20px rgba(0,0,0,.25)}
+    .lamp.off{filter: grayscale(60%) brightness(40%) contrast(80%); opacity:.35; box-shadow: inset 0 0 0 1px #3a3a3a}
+    .toprow{display:flex; align-items:center; justify-content:space-between; margin-bottom:12px}
+    .badge{font-size:13px; color:#c5cbd1}
+    .install-tip{color:#9aa1a8; font-size:12px; margin-top:10px}
+    .overlay{
+      position:fixed; inset:0; display:none; align-items:center; justify-content:center;
+      background:rgba(0,0,0,.8); text-align:center; padding:24px; z-index:9999
+    }
+    .overlay.show{display:flex}
+    .overlay .box{max-width:520px}
+    .overlay .title{font-size:28px; font-weight:700; margin-bottom:8px}
+    .overlay .text{color:#d0d6db}
+    .switches{display:flex; gap:8px; flex-wrap:wrap}
+    .choice{padding:8px 10px; border-radius:10px; border:1px solid #3a3f44; background:#0e1011; color:var(--text); cursor:pointer; font-size:13px}
+    .choice.active{background:var(--accent); color:#0b0f10; border-color:#27c08a}
+    .clock{margin-top:12px; text-align:center; font-variant-numeric:tabular-nums; font-size:18px; color:#e7f3f0}
+    .progress{height:6px; background:#2b2f33; border-radius:999px; overflow:hidden; margin:8px 0 0}
+    .progress > div{height:100%; width:0; background:linear-gradient(90deg,#34d399,#22d3ee);}
+    /* BIG TOTAL TIME */
+    .total-time-wrap{margin:10px 0 4px; display:flex; align-items:center; gap:10px; flex-wrap:wrap}
+    .total-time-label{font-size:12px; color:#aab3ba}
+    .total-time{font-size:40px; font-weight:800; letter-spacing:0.5px; color:#eafff8}
+    @media (max-width:480px){ .total-time{font-size:34px;} }
+  </style>
+</head>
+<body>
+  <div class="overlay" id="orientOverlay">
+    <div class="box">
+      <div class="title">Vrid enheten</div>
+      <div class="text">Den här timern är optimerad för liggande läge (landskap). Rotera skärmen för bästa upplevelse.</div>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="grid">
+      <div class="card">
+        <h1>Inställningar</h1>
+        <div class="sub">Justera innan start. Förhandsvisningen till höger uppdateras direkt.</div>
+
+        <label>Antal lampor: <span id="lampsOut" class="hint"></span></label>
+        <input id="lamps" type="range" min="5" max="120" value="15">
+        <div class="row">
+          <input id="lampsNum" type="number" min="5" max="120" value="15">
+          <span class="hint">(5–120)</span>
+        </div>
+
+        <label>Minuter per lampa: <span id="mplOut" class="hint"></span></label>
+        <input id="mpl" type="range" min="0.5" max="30" step="0.5" value="2">
+        <div class="row">
+          <input id="mplNum" type="number" min="0.5" max="60" step="0.5" value="2">
+          <span class="hint">(0.5–30)</span>
+        </div>
+
+        <label>Lampor per rad: <span id="perRowOut" class="hint"></span></label>
+        <input id="perRow" type="range" min="5" max="120" value="15">
+        <div class="row">
+          <input id="perRowNum" type="number" min="1" max="120" value="15">
+          <span class="hint">Radbrytning för mindre skärmar</span>
+        </div>
+
+        <fieldset style="margin:0 0 16px 0">
+          <legend style="margin-bottom:8px; font-size:13px">Färgtema</legend>
+          <div class="switches">
+            <button class="choice active" data-scheme="gyr">Grön→Gul→Röd</button>
+            <button class="choice" data-scheme="rainbow">Regnbåge</button>
+            <button class="choice" data-scheme="white">Vit</button>
+          </div>
+          <div class="hint" style="margin-top:6px">Färgerna tonas längs stapeln och släcks successivt från vänster.</div>
+        </fieldset>
+
+        <label class="row" style="margin-bottom:10px">
+          <input type="checkbox" id="sound" checked>
+          <span class="hint">Ljudsignal när tiden är slut</span>
+        </label>
+
+        <!-- BIG TOTAL TIME DISPLAY -->
+        <div class="total-time-wrap">
+          <div class="total-time-label">Total tid</div>
+          <div class="total-time" id="totalBig">30 min</div>
+        </div>
+        <div class="progress" title="Total progress"><div id="progressFill"></div></div>
+
+        <div class="row" style="gap:10px; margin-top:12px">
+          <button id="startBtn" class="btn primary">Starta i fullskärm</button>
+          <button id="pauseBtn" class="btn light" style="display:none">Pausa</button>
+          <button id="resetBtn" class="btn ghost" style="display:none">Nollställ</button>
+        </div>
+
+        <div class="install-tip">Tips: Om fullskärm/landskap eller PWA-installation inte tillåts vid casting beror det ofta på enhetens begränsningar.</div>
+      </div>
+
+      <div class="card">
+        <div class="toprow">
+          <div style="font-size:16px; font-weight:700" id="panelTitle">Förhandsvisning</div>
+          <div class="badge" id="panelBadge">15 lampor × 2 min</div>
+        </div>
+
+        <div id="lampWrap" class="grid-lamps"></div>
+
+        <div class="clock" id="clock">00:00</div>
+
+        <div id="runInfo" class="hint" style="margin-top:12px; text-align:center; display:none"></div>
+
+        <div id="runBtns" class="row" style="justify-content:center; margin-top:16px; display:none">
+          <button id="pauseBtn2" class="btn light">Pausa</button>
+          <button id="resetBtn2" class="btn ghost">Avsluta</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // --- State ---
+    const state = {
+      lamps: 15,
+      mpl: 2,
+      perRow: 15,
+      scheme: 'gyr',
+      sound: true,
+      running: false,
+      paused: false,
+      finished: false,
+      off: 0,
+      elapsedInLampMs: 0,
+      stepMs: 2*60*1000,
+      previewIndex: 0,
+      previewTimer: null,
+      tick: null,
+      wakeLock: null,
+      audioCtx: null
+    };
+
+    // --- Elements ---
+    const el = (id)=>document.getElementById(id);
+    const lamps = el('lamps'); const lampsNum = el('lampsNum'); const lampsOut = el('lampsOut');
+    const mpl = el('mpl'); const mplNum = el('mplNum'); const mplOut = el('mplOut');
+    const perRow = el('perRow'); const perRowNum = el('perRowNum'); const perRowOut = el('perRowOut');
+    const totalBig = el('totalBig'); const panelTitle = el('panelTitle'); const panelBadge = el('panelBadge');
+    const startBtn = el('startBtn'); const pauseBtn = el('pauseBtn'); const resetBtn = el('resetBtn');
+    const pauseBtn2 = el('pauseBtn2'); const resetBtn2 = el('resetBtn2');
+    const lampWrap = el('lampWrap'); const runInfo = el('runInfo'); const runBtns = el('runBtns');
+    const orientOverlay = el('orientOverlay'); const clock = el('clock');
+    const progressFill = el('progressFill');
+
+    // --- Orientation Overlay ---
+    function checkOrientation(){
+      const portrait = window.innerHeight > window.innerWidth;
+      orientOverlay.classList.toggle('show', portrait);
+    }
+    window.addEventListener('resize', checkOrientation); checkOrientation();
+
+    // --- Helpers ---
+    function clamp(v, mi, ma){return Math.max(mi, Math.min(ma, v));}
+    function updateStep(){ state.stepMs = Math.max(10, state.mpl * 60 * 1000); }
+    function hueColor(h){ return `linear-gradient(180deg, hsl(${h} 90% 60%), hsl(${h} 80% 50%))`; }
+    function colorFor(index,total){
+      const t = total<=1 ? 0 : index/(total-1);
+      if(state.scheme==='white') return 'linear-gradient(180deg,#f3f4f6,#d1d5db)';
+      if(state.scheme==='gyr'){
+        const hue = 120 * (1 - t); // grön -> röd
+        return hueColor(hue);
+      }
+      // rainbow
+      const hue = 240 + 360 * (1 - t);
+      return hueColor(hue);
+    }
+    function dimStyle(base){ return `filter:grayscale(60%) brightness(40%) contrast(80%);opacity:.35;box-shadow:inset 0 0 0 1px #3a3a3a;background:${base}`; }
+
+    function renderLamps(offCount){
+      const cols = clamp(state.perRow, 1, state.lamps);
+      lampWrap.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+      lampWrap.innerHTML = '';
+      for(let i=0;i<state.lamps;i++){
+        const base = colorFor(i, state.lamps);
+        const isOff = i < offCount;
+        const div = document.createElement('div');
+        div.className = 'lamp' + (isOff?' off':'');
+        div.style = isOff ? dimStyle(base) : `background:${base}`;
+        lampWrap.appendChild(div);
+      }
+    }
+
+    function formatMS(ms){
+      ms = Math.max(0, ms|0);
+      const s = Math.floor(ms/1000);
+      const m = Math.floor(s/60);
+      const sec = s % 60;
+      const mm = String(m).padStart(2,'0');
+      const ss = String(sec).padStart(2,'0');
+      return mm+':'+ss;
+    }
+
+    function renderClockAndProgress(){
+      const totalMs = state.lamps*state.stepMs;
+      const elapsedMs = state.off*state.stepMs + state.elapsedInLampMs;
+      const remainingMs = totalMs - elapsedMs;
+      clock.textContent = formatMS(remainingMs);
+      const ratio = totalMs>0 ? Math.min(1, Math.max(0, elapsedMs/totalMs)) : 0;
+      progressFill.style.width = (ratio*100).toFixed(3) + '%';
+    }
+
+    function renderPanel() {
+      panelTitle.textContent = state.running ? 'Nedräkning' : 'Förhandsvisning';
+      panelBadge.textContent = state.running ? `Lampa ${Math.min(state.off+1,state.lamps)} / ${state.lamps}` : `${state.lamps} lampor × ${state.mpl} min`;
+      renderLamps(state.running ? state.off : state.previewIndex);
+      renderClockAndProgress();
+      runInfo.style.display = (state.running && !state.finished) ? 'block' : 'none';
+      if (state.running && !state.finished) runInfo.textContent = `Varje lampa: ${state.mpl} min · Återstår: ${Math.max(0, state.lamps - state.off)} st`;
+      runBtns.style.display = state.running ? 'flex' : 'none';
+      pauseBtn.style.display = (!state.running || state.finished) ? 'none' : 'inline-block';
+      resetBtn.style.display = (state.running || state.finished) ? 'inline-block' : 'none';
+    }
+
+    function renderControls(){
+      // Update big total time
+      const totalMin = state.lamps * state.mpl;
+      totalBig.textContent = totalMin + ' min';
+      lamps.value = String(state.lamps); lampsNum.value = String(state.lamps);
+      mpl.value = String(state.mpl); mplNum.value = String(state.mpl);
+      perRow.value = String(state.perRow); perRowNum.value = String(state.perRow);
+    }
+
+    // --- Single-run preview ---
+    function startPreviewOnce(){
+      stopPreview();
+      state.previewIndex = 0;
+      // Immediately render first frame
+      if(!state.running) renderPanel();
+      state.previewTimer = setInterval(()=>{
+        if(state.running){ stopPreview(); return; }
+        state.previewIndex += 1;
+        if(state.previewIndex > state.lamps){
+          stopPreview(); // stop after one pass
+          return;
+        }
+        renderPanel();
+      }, 500);
+    }
+    function stopPreview(){ if(state.previewTimer){ clearInterval(state.previewTimer); state.previewTimer=null; } }
+
+    // --- Audio ---
+    function beep(){
+      try{
+        const ctx = state.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+        state.audioCtx = ctx;
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.type='sine'; o.frequency.value = 880;
+        g.gain.value = 0.001;
+        o.connect(g); g.connect(ctx.destination);
+        o.start();
+        const now = ctx.currentTime;
+        g.gain.exponentialRampToValueAtTime(0.2, now + 0.05);
+        g.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+        o.stop(now + 1.25);
+      }catch(e){}
+    }
+
+    // --- Wake Lock ---
+    async function requestWake(){
+      try{
+        if('wakeLock' in navigator){
+          state.wakeLock = await navigator.wakeLock.request('screen');
+          state.wakeLock.addEventListener?.('release', ()=>{});
+        }
+      }catch(e){}
+    }
+    async function releaseWake(){
+      try{ await state.wakeLock?.release?.(); state.wakeLock=null; }catch(e){}
+    }
+
+    // --- Fullscreen helpers ---
+    async function enterFs(){
+      try{
+        await document.documentElement.requestFullscreen();
+        if (screen.orientation && screen.orientation.lock) {
+          try{ await screen.orientation.lock('landscape'); }catch(e){}
+        }
+      }catch(e){}
+    }
+    async function exitFs(){
+      try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){}
+    }
+
+    // --- Timer loop ---
+    function startTimer(){
+      state.tick = setInterval(()=>{
+        if(!state.running || state.paused || state.finished) return;
+        state.elapsedInLampMs += 200;
+        if(state.elapsedInLampMs >= state.stepMs){
+          state.elapsedInLampMs -= state.stepMs;
+          state.off += 1;
+          if(state.off >= state.lamps){
+            state.finished = true;
+            state.running = false;
+            if(state.sound) beep();
+            releaseWake();
+          }
+        }
+        renderPanel();
+      }, 200);
+    }
+    function stopTimer(){ if(state.tick){ clearInterval(state.tick); state.tick=null; } }
+
+    // --- Event wiring ---
+    function setScheme(next){
+      state.scheme = next;
+      document.querySelectorAll('.choice').forEach(btn=>{
+        btn.classList.toggle('active', btn.getAttribute('data-scheme')===next);
+      });
+      if(!state.running){ renderPanel(); startPreviewOnce(); }
+    }
+    document.querySelectorAll('.choice').forEach(btn=>{
+      btn.addEventListener('click', ()=> setScheme(btn.getAttribute('data-scheme')) );
+    });
+
+    function onChangeRepreview(cb){
+      cb();
+      if(!state.running){ renderPanel(); startPreviewOnce(); }
+    }
+
+    lamps.addEventListener('input', ()=> onChangeRepreview(()=>{
+      state.lamps = clamp(+lamps.value,5,120);
+      perRow.max = String(state.lamps); perRowNum.max = String(state.lamps);
+      // keep perRow within range
+      state.perRow = clamp(state.perRow, 1, state.lamps);
+      renderControls();
+    }));
+    lampsNum.addEventListener('input', ()=> onChangeRepreview(()=>{
+      state.lamps = clamp(+lampsNum.value||0,5,120);
+      perRow.max = String(state.lamps); perRowNum.max = String(state.lamps);
+      state.perRow = clamp(state.perRow, 1, state.lamps);
+      renderControls();
+    }));
+
+    mpl.addEventListener('input', ()=> onChangeRepreview(()=>{
+      state.mpl = +mpl.value; updateStep(); renderControls();
+    }));
+    mplNum.addEventListener('input', ()=> onChangeRepreview(()=>{
+      state.mpl = +mplNum.value||0.5; state.mpl = clamp(state.mpl,0.5,60); updateStep(); renderControls();
+    }));
+
+    perRow.addEventListener('input', ()=> onChangeRepreview(()=>{
+      state.perRow = clamp(+perRow.value,1,120); renderControls();
+    }));
+    perRowNum.addEventListener('input', ()=> onChangeRepreview(()=>{
+      state.perRow = clamp(+perRowNum.value||1,1,120); renderControls();
+    }));
+
+    el('sound').addEventListener('change', (e)=>{ state.sound = e.target.checked; });
+
+    startBtn.addEventListener('click', async ()=>{
+      await enterFs();
+      await requestWake();
+      state.running = true; state.paused=false; state.finished=false;
+      state.off = 0; state.elapsedInLampMs=0;
+      renderControls(); renderPanel();
+      stopPreview(); startTimer();
+    });
+
+    function togglePause(){
+      state.paused = !state.paused;
+      const text = state.paused ? 'Fortsätt' : 'Pausa';
+      pauseBtn.textContent = text; pauseBtn2.textContent = text;
+    }
+
+    pauseBtn.addEventListener('click', ()=>{ togglePause(); });
+    pauseBtn2.addEventListener('click', ()=>{ togglePause(); });
+
+    function resetAll(){
+      state.running=false; state.paused=false; state.finished=false;
+      state.off=0; state.elapsedInLampMs=0;
+      stopTimer(); releaseWake(); exitFs();
+      renderControls(); renderPanel(); startPreviewOnce();
+      pauseBtn.textContent='Pausa'; pauseBtn2.textContent='Pausa';
+    }
+    resetBtn.addEventListener('click', resetAll);
+    resetBtn2.addEventListener('click', resetAll);
+
+    // --- PWA injection (optional, best-effort) ---
+    (function injectPWA(){
+      try{
+        const manifest = {
+          name: "Visuell Tidsnedräknare",
+          short_name: "Timer",
+          start_url: ".",
+          display: "standalone",
+          background_color: "#0b0f10",
+          theme_color: "#111315",
+          description: "Minimalistisk nedräknare med visuella lampor",
+          icons: []
+        };
+        const url = URL.createObjectURL(new Blob([JSON.stringify(manifest)], {type:'application/json'}));
+        const link = document.createElement('link'); link.rel='manifest'; link.href=url; document.head.appendChild(link);
+
+        const swCode = "self.addEventListener('install',e=>self.skipWaiting());self.addEventListener('activate',e=>self.clients.claim());self.addEventListener('fetch',e=>{});";
+        const swUrl = URL.createObjectURL(new Blob([swCode], {type:'text/javascript'}));
+        if('serviceWorker' in navigator){ navigator.serviceWorker.register(swUrl).catch(()=>{}); }
+      }catch(e){}
+    })();
+
+    // --- Init ---
+    function init(){
+      updateStep(); renderControls(); renderPanel(); startPreviewOnce();
+    }
+    // Delay init slightly to ensure layout stable on mobile
+    setTimeout(init, 0);
+  </script>
+</body>
+</html>

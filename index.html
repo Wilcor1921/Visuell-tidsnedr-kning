@@ -1,395 +1,200 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="sv">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Visuell Tidsnedräknare</title>
 <style>
-  :root{
-    --bg:#0f1113;
-    --panel:#171a1d;
-    --panel2:#1a1d20ee;
-    --text:#e7e9ea;
-    --muted:#a7adb3;
-    --accent:#34d399;
-    --border:#2b2f33;
-    --pad:16px;
+  body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background-color: #222;
+    color: white;
   }
-  *{box-sizing:border-box}
-  html,body{min-height:100%}
-  body{
-    margin:0;
-    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    background:var(--bg); color:var(--text);
-    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
-    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  header {
+    background: #333;
+    padding: 10px;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
   }
-
-  /* Sticky topp med kärnkontroller (mobilvänlig) */
-  .topbar{
-    position: sticky; top: 0; z-index: 50;
-    background: linear-gradient(180deg, #0f1113, #121417);
-    border-bottom:1px solid var(--border);
-    padding: 10px var(--pad);
-  }
-  .topgrid{
-    display:grid; gap:10px;
-    grid-template-columns: 1fr auto;
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
     align-items: center;
   }
-  .totaltime{
-    text-align:center;
-    font-size: 34px; font-weight: 800; letter-spacing:.3px;
+  .controls label {
+    display: flex;
+    flex-direction: column;
+    font-size: 14px;
   }
-  .totaltime small{font-size:14px; color:var(--muted); font-weight:600; margin-left:6px}
-
-  .quick-controls{
-    display:grid; gap:8px;
-    grid-template-columns: 1fr 1fr;
+  .total-time {
+    font-size: 28px;
+    font-weight: bold;
+    margin-left: auto;
+    margin-right: 10px;
   }
-  .quick-controls .field{
-    display:flex; gap:8px; align-items:center; justify-content:space-between;
-    background: #121417; border:1px solid var(--border); border-radius:12px; padding:8px 10px;
+  main {
+    padding: 20px;
   }
-  .quick-controls label{font-size:12px; color:var(--muted)}
-  .quick-controls input[type=number],
-  .quick-controls select{
-    width:88px; max-width:45vw;
-    padding:6px 8px; border-radius:8px; border:1px solid #2b2f33; background:#0e1011; color:var(--text);
-    font-size:14px;
+  .lamp-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: center;
+    margin-top: 20px;
   }
-
-  .startrow{
-    display:flex; gap:8px; justify-content:center; margin-top:8px;
+  .lamp {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    background: #555;
+    transition: background-color 0.5s;
   }
-  .btn{cursor:pointer; padding:10px 14px; border-radius:12px; border:1px solid transparent; font-weight:700; font-size:14px}
-  .btn.primary{background:var(--accent); color:#0b0f10}
-  .btn.ghost{background:#22272b; color:var(--text); border-color:#30353a}
-
-  /* Expandera fler inställningar */
-  .advanced{
-    background:var(--panel2); border-top:1px solid var(--border);
-    padding: 10px var(--pad) 14px;
+  .timer-display {
+    text-align: center;
+    font-size: 48px;
+    margin-top: 20px;
   }
-  details{border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#14171a}
-  summary{
-    cursor:pointer; list-style:none; padding:12px 14px; font-weight:700; font-size:14px;
-    background:#14171a; border-bottom:1px solid #1f2428;
-  }
-  summary::-webkit-details-marker{display:none}
-  .panel{padding:12px 14px}
-  .row{display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px}
-  .row label{font-size:12px; color:var(--muted)}
-  input[type=range]{width:100%}
-  input[type=number]{width:100px; padding:8px 10px; background:#0e1011; color:var(--text); border:1px solid var(--border); border-radius:10px}
-  .choices{display:flex; gap:8px; flex-wrap:wrap}
-  .choice{padding:8px 10px; border-radius:10px; border:1px solid #3a3f44; background:#0e1011; color:var(--text); cursor:pointer; font-size:13px}
-  .choice.active{background:var(--accent); color:#0b0f10; border-color:#27c08a}
-
-  /* Innehåll */
-  .wrap{padding: 12px var(--pad) 24px}
-  .card{
-    background:var(--panel2); border:1px solid var(--border); border-radius:16px; padding:14px;
-    box-shadow:0 10px 30px rgba(0,0,0,.25); backdrop-filter: blur(6px);
-  }
-  .toprow{display:flex; align-items:center; justify-content:space-between; margin-bottom:8px}
-  .badge{font-size:12px; color:#c5cbd1}
-
-  .grid-lamps{
-    display:grid; gap:6px;
-  }
-
-  /* Lampor auto-storlek på mobil: håll dem stora men passa höjd */
-  .lamp{
-    aspect-ratio: 4/3;       /* rektangulära "lampor" som skalar bra */
-    min-height: 32px;        /* aldrig för små */
-    border-radius:12px;
-    transition: filter .2s ease, opacity .2s ease, background .2s ease;
-    box-shadow: inset 0 0 0 1px rgba(255,255,255,.45), 0 6px 14px rgba(0,0,0,.25);
-  }
-  .lamp.off{filter: grayscale(60%) brightness(40%) contrast(80%); opacity:.35; box-shadow: inset 0 0 0 1px #3a3a3a}
-
-  .clock{margin-top:10px; text-align:center; font-variant-numeric:tabular-nums; font-size:22px; color:#dff3ee}
-  .progress{height:6px; background:#2b2f33; border-radius:999px; overflow:hidden; margin-top:8px}
-  .progress > div{height:100%; width:0; background:linear-gradient(90deg,#34d399,#22d3ee);}
-
-  /* Desktop-layout */
-  @media (min-width: 980px){
-    .topgrid{grid-template-columns: 1fr auto 1fr}
-    .totaltime{font-size:40px}
-    .wrap{display:grid; grid-template-columns: 1.1fr 2fr; gap:16px}
-    .startrow{justify-content:flex-end}
+  button {
+    padding: 8px 16px;
+    font-size: 16px;
+    cursor: pointer;
   }
 </style>
 </head>
 <body>
 
-<!-- STICKY TOPP: snabba kontroller och stor total-tid -->
-<div class="topbar">
-  <div class="topgrid">
-    <div class="quick-controls">
-      <div class="field">
-        <label>Lampor</label>
-        <input type="number" id="lampCount" value="15" min="5" max="120">
-      </div>
-      <div class="field">
-        <label>Min/lampa</label>
-        <input type="number" id="minutesPerLamp" value="2" min="0.5" step="0.5" max="60">
-      </div>
-      <div class="field">
-        <label>Per rad</label>
-        <input type="number" id="lampsPerRow" value="15" min="1" max="120">
-      </div>
-      <div class="field">
-        <label>Tema</label>
-        <select id="colorTheme">
-          <option value="gyr">Grön→Gul→Röd</option>
-          <option value="rainbow">Regnbåge</option>
-          <option value="white">Vit</option>
-        </select>
-      </div>
-    </div>
-
-    <div class="totaltime"><span id="totalTimeDisplay">30</span><small>min</small></div>
-
-    <div class="startrow">
-      <button class="btn primary" id="startBtn">Starta i fullskärm</button>
-      <button class="btn ghost" id="resetBtn" style="display:none">Nollställ</button>
-    </div>
+<header>
+  <div class="controls">
+    <label>
+      Lampor:
+      <input type="number" id="lampCount" value="15" min="1">
+    </label>
+    <label>
+      Minuter/lampa:
+      <input type="number" id="minutesPerLamp" value="2" min="0.1" step="0.1">
+    </label>
+    <label>
+      Lampor per rad:
+      <input type="number" id="lampsPerRow" value="5" min="1">
+    </label>
+    <label>
+      Färgtema:
+      <select id="colorTheme">
+        <option value="gyr">Grön → Gul → Röd</option>
+        <option value="rainbow">Regnbåge</option>
+        <option value="white">Vit / Av</option>
+      </select>
+    </label>
+    <div class="total-time" id="totalTimeDisplay"></div>
+    <button id="startBtn">Starta i fullskärm</button>
   </div>
-</div>
+</header>
 
-<!-- Fler inställningar som kan fällas ut -->
-<div class="advanced">
-  <details>
-    <summary>Fler inställningar</summary>
-    <div class="panel">
-      <div class="row">
-        <label for="lampsRange">Antal lampor</label>
-        <input id="lampsRange" type="range" min="5" max="120" value="15">
-      </div>
-      <div class="row">
-        <label for="mplRange">Minuter per lampa</label>
-        <input id="mplRange" type="range" min="0.5" max="30" step="0.5" value="2">
-      </div>
-      <div class="row">
-        <label for="perRowRange">Lampor per rad</label>
-        <input id="perRowRange" type="range" min="1" max="120" value="15">
-      </div>
-
-      <div class="row">
-        <span style="font-size:12px;color:var(--muted)">Färgtema</span>
-        <div class="choices" id="themeChoices">
-          <button class="choice active" data-scheme="gyr">Grön→Gul→Röd</button>
-          <button class="choice" data-scheme="rainbow">Regnbåge</button>
-          <button class="choice" data-scheme="white">Vit</button>
-        </div>
-      </div>
-
-      <div class="row" style="margin-top:4px">
-        <label style="display:flex;align-items:center;gap:10px">
-          <input type="checkbox" id="sound" checked>
-          <span style="font-size:13px">Ljudsignal när tiden är slut</span>
-        </label>
-      </div>
-
-      <div class="progress" title="Total progress"><div id="progressFill"></div></div>
-    </div>
-  </details>
-</div>
-
-<!-- Innehåll: förhandsvisning/timer -->
-<div class="wrap">
-  <div class="card">
-    <div class="toprow">
-      <div style="font-weight:800">Visuell Nedräkning</div>
-      <div class="badge" id="panelBadge">15 × 2 min</div>
-    </div>
-    <div id="lampWrap" class="grid-lamps"></div>
-    <div class="clock" id="clock">00:00</div>
-  </div>
-</div>
+<main>
+  <div class="lamp-container" id="lampContainer"></div>
+  <div class="timer-display" id="timerDisplay">00:00</div>
+</main>
 
 <script>
-  // ======= STATE =======
-  const state = {
-    lamps: 15,
-    mpl: 2,
-    perRow: 15,
-    scheme: 'gyr',
-    sound: true,
-    running: false,
-    paused: false,
-    finished: false,
-    off: 0,
-    elapsedInLampMs: 0,
-    stepMs: 2 * 60 * 1000,
-    previewIndex: 0,
-    previewTimer: null,
-    tick: null,
-    wakeLock: null,
-    audioCtx: null,
-    demoPlayedOnce: false
-  };
+  const lampContainer = document.getElementById('lampContainer');
+  const lampCountInput = document.getElementById('lampCount');
+  const minutesPerLampInput = document.getElementById('minutesPerLamp');
+  const lampsPerRowInput = document.getElementById('lampsPerRow');
+  const colorThemeSelect = document.getElementById('colorTheme');
+  const timerDisplay = document.getElementById('timerDisplay');
+  const totalTimeDisplay = document.getElementById('totalTimeDisplay');
+  const startBtn = document.getElementById('startBtn');
 
-  // ======= ELEMENTS =======
-  const $ = id => document.getElementById(id);
-  const lampCount = $('lampCount');
-  const minutesPerLamp = $('minutesPerLamp');
-  const lampsPerRow = $('lampsPerRow');
-  const colorTheme = $('colorTheme');
-  const totalTimeDisplay = $('totalTimeDisplay');
+  let lamps = [];
+  let timerInterval;
+  let currentLamp = 0;
+  let demoPlayed = false;
 
-  const lampsRange = $('lampsRange');
-  const mplRange = $('mplRange');
-  const perRowRange = $('perRowRange');
-  const sound = $('sound');
-
-  const startBtn = $('startBtn');
-  const resetBtn = $('resetBtn');
-
-  const lampWrap = $('lampWrap');
-  const clock = $('clock');
-  const progressFill = $('progressFill');
-  const panelBadge = $('panelBadge');
-
-  // ======= HELPERS =======
-  function clamp(v, mi, ma){ return Math.max(mi, Math.min(ma, v)); }
-  function updateStep(){ state.stepMs = Math.max(10, state.mpl * 60 * 1000); }
-  function hueCss(h){ return `linear-gradient(180deg, hsl(${h} 90% 60%), hsl(${h} 80% 50%))`; }
-  function colorFor(i,total){
-    const t = total<=1 ? 0 : i/(total-1);
-    if(state.scheme==='white') return 'linear-gradient(180deg,#f3f4f6,#d1d5db)';
-    if(state.scheme==='gyr'){ const hue = 120 * (1 - t); return hueCss(hue); }
-    const hue = 240 + 360 * (1 - t); return hueCss(hue); // rainbow
-  }
-  function dimStyle(base){ return `filter:grayscale(60%) brightness(40%) contrast(80%);opacity:.35;box-shadow:inset 0 0 0 1px #3a3a3a;background:${base}`; }
-
-  function formatMS(ms){
-    ms = Math.max(0, ms|0);
-    const s = Math.floor(ms/1000);
-    const m = Math.floor(s/60);
-    const sec = s % 60;
-    return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+  function updateTotalTime() {
+    const total = (parseFloat(lampCountInput.value) * parseFloat(minutesPerLampInput.value)).toFixed(1);
+    totalTimeDisplay.textContent = `${total} min`;
   }
 
-  function renderTotal(){
-    totalTimeDisplay.textContent = (state.lamps * state.mpl).toString();
-  }
-
-  function renderLamps(offCount){
-    const cols = clamp(state.perRow, 1, state.lamps);
-    lampWrap.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
-    lampWrap.innerHTML = '';
-    for(let i=0;i<state.lamps;i++){
-      const base = colorFor(i, state.lamps);
-      const isOff = i < offCount;
-      const div = document.createElement('div');
-      div.className = 'lamp' + (isOff?' off':'');
-      div.style = isOff ? dimStyle(base) : `background:${base}`;
-      lampWrap.appendChild(div);
+  function createLamps() {
+    lampContainer.innerHTML = '';
+    lamps = [];
+    const count = parseInt(lampCountInput.value);
+    for (let i = 0; i < count; i++) {
+      const lamp = document.createElement('div');
+      lamp.classList.add('lamp');
+      lampContainer.appendChild(lamp);
+      lamps.push(lamp);
     }
   }
 
-  function renderClockAndProgress(){
-    const totalMs = state.lamps*state.stepMs;
-    const elapsedMs = state.off*state.stepMs + state.elapsedInLampMs;
-    const remainingMs = totalMs - elapsedMs;
-    clock.textContent = formatMS(remainingMs);
-    const ratio = totalMs>0 ? Math.min(1, Math.max(0, elapsedMs/totalMs)) : 0;
-    progressFill.style.width = (ratio*100).toFixed(3) + '%';
+  function getLampColor(index, total) {
+    const theme = colorThemeSelect.value;
+    const ratio = index / (total - 1);
+    if (theme === 'gyr') {
+      const r = Math.floor(255 * ratio);
+      const g = Math.floor(255 * (1 - ratio));
+      return `rgb(${r},${g},0)`;
+    } else if (theme === 'rainbow') {
+      const hue = Math.floor(ratio * 360);
+      return `hsl(${hue},100%,50%)`;
+    } else {
+      return index <= currentLamp ? '#fff' : '#555';
+    }
   }
 
-  function renderPanel(){
-    panelBadge.textContent = `${state.lamps} × ${state.mpl} min`;
-    renderLamps(state.running ? state.off : state.previewIndex);
-    renderClockAndProgress();
-    resetBtn.style.display = (state.running || state.finished) ? 'inline-block' : 'none';
+  function playDemo() {
+    if (demoPlayed) return;
+    demoPlayed = true;
+    let i = 0;
+    const demoInterval = setInterval(() => {
+      lamps.forEach((lamp, idx) => {
+        lamp.style.backgroundColor = idx <= i ? getLampColor(idx, lamps.length) : '#555';
+      });
+      i++;
+      if (i >= lamps.length) clearInterval(demoInterval);
+    }, 100);
   }
 
-  // ======= DEMO (en gång per ändring) =======
-  function startPreviewOnce(){
-    stopPreview();
-    state.previewIndex = 0;
-    renderPanel();
-    state.previewTimer = setInterval(()=>{
-      state.previewIndex += 1;
-      if(!state.running) renderPanel();
-      if(state.previewIndex >= state.lamps){
-        stopPreview();
+  function startTimer() {
+    currentLamp = 0;
+    let totalSeconds = parseFloat(lampCountInput.value) * parseFloat(minutesPerLampInput.value) * 60;
+    const secondsPerLamp = totalSeconds / lamps.length;
+
+    document.documentElement.requestFullscreen?.();
+
+    timerInterval = setInterval(() => {
+      totalSeconds--;
+      const mins = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+      const secs = String(totalSeconds % 60).padStart(2, '0');
+      timerDisplay.textContent = `${mins}:${secs}`;
+
+      currentLamp = Math.floor((parseFloat(lampCountInput.value) * parseFloat(minutesPerLampInput.value) * 60 - totalSeconds) / secondsPerLamp);
+      lamps.forEach((lamp, idx) => {
+        lamp.style.backgroundColor = idx <= currentLamp ? getLampColor(idx, lamps.length) : '#555';
+      });
+
+      if (totalSeconds <= 0) {
+        clearInterval(timerInterval);
+        alert('Tiden är slut!');
       }
-    }, 140);
-  }
-  function stopPreview(){ if(state.previewTimer){ clearInterval(state.previewTimer); state.previewTimer=null; } }
-
-  // ======= AUDIO =======
-  function beep(){
-    try{
-      const ctx = state.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
-      state.audioCtx = ctx;
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type='sine'; o.frequency.value = 880;
-      g.gain.value = 0.001;
-      o.connect(g); g.connect(ctx.destination);
-      o.start();
-      const now = ctx.currentTime;
-      g.gain.exponentialRampToValueAtTime(0.2, now + 0.05);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
-      o.stop(now + 1.25);
-    }catch(e){}
+    }, 1000);
   }
 
-  // ======= WAKE LOCK =======
-  async function requestWake(){ try{ if('wakeLock' in navigator){ state.wakeLock = await navigator.wakeLock.request('screen'); } }catch(e){} }
-  async function releaseWake(){ try{ await state.wakeLock?.release?.(); state.wakeLock=null; }catch(e){} }
+  lampCountInput.addEventListener('input', () => { createLamps(); updateTotalTime(); demoPlayed = false; playDemo(); });
+  minutesPerLampInput.addEventListener('input', () => { createLamps(); updateTotalTime(); demoPlayed = false; playDemo(); });
+  lampsPerRowInput.addEventListener('input', () => { createLamps(); updateTotalTime(); demoPlayed = false; playDemo(); });
+  colorThemeSelect.addEventListener('change', () => { createLamps(); updateTotalTime(); demoPlayed = false; playDemo(); });
 
-  // ======= FULLSCREEN =======
-  async function enterFs(){
-    try{
-      await document.documentElement.requestFullscreen?.();
-      if (screen.orientation && screen.orientation.lock) { try{ await screen.orientation.lock('landscape'); }catch(e){} }
-    }catch(e){}
-  }
-  async function exitFs(){ try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){} }
+  startBtn.addEventListener('click', startTimer);
 
-  // ======= TIMER =======
-  function startTimer(){
-    state.tick = setInterval(()=>{
-      if(!state.running || state.paused || state.finished) return;
-      state.elapsedInLampMs += 200;
-      if(state.elapsedInLampMs >= state.stepMs){
-        state.elapsedInLampMs -= state.stepMs;
-        state.off += 1;
-        if(state.off >= state.lamps){
-          state.finished = true;
-          state.running = false;
-          if(state.sound) beep();
-          releaseWake();
-        }
-      }
-      renderPanel();
-    }, 200);
-  }
-  function stopTimer(){ if(state.tick){ clearInterval(state.tick); state.tick=null; } }
+  // Init
+  createLamps();
+  updateTotalTime();
+  playDemo();
+</script>
 
-  // ======= EVENTS =======
-  function syncRanges(){
-    lampsRange.value = state.lamps;
-    mplRange.value = state.mpl;
-    perRowRange.value = state.perRow;
-  }
-  function syncQuick(){
-    lampCount.value = state.lamps;
-    minutesPerLamp.value = state.mpl;
-    lampsPerRow.value = state.perRow;
-    colorTheme.value = state.scheme;
-  }
-
-  function applyAndPreview(){
-    updateStep(); renderTotal(); renderPanel(); startPreviewOnce();
-  }
-
-  // Quick controls
-  lampCount.addEventListener('input', ()=>{ state.lamps = clamp(+lampCount.value,5,120); syncRanges(); applyAndPreview(); });
-  minutesPerLamp.addEventListener('input', ()=>{ state.mpl
+</body>
+</html>

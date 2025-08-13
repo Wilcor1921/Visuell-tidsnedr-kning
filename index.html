@@ -18,11 +18,12 @@
     -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
   }
 
-  /* Topbar med stepprare och chips */
+  /* Topbar */
   .topbar{ position:sticky; top:0; z-index:60; background:linear-gradient(180deg,#0f1113,#121417);
     border-bottom:1px solid var(--border); padding:10px var(--pad); }
   .topgrid{ display:grid; gap:12px; grid-template-columns: 1fr auto; align-items:center; }
 
+  /* Stepprare */
   .steppers{ display:grid; gap:10px; grid-template-columns: repeat(3, minmax(0,1fr)); }
   .stepper{
     background:#121417; border:1px solid var(--border); border-radius:14px; padding:8px 10px;
@@ -33,18 +34,16 @@
     width:42px; height:42px; border-radius:12px; border:1px solid #2b2f33; background:#0e1011; color:#e7e9ea;
     font-size:22px; font-weight:900; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none;
   }
-  .stepper .val{
-    text-align:center; font-size:20px; font-weight:800;
-  }
+  .stepper .val{ text-align:center; font-size:20px; font-weight:800; }
 
-  .chips{ display:flex; flex-wrap:wrap; gap:8px }
+  /* Chips */
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px }
   .chip{
     padding:8px 12px; border-radius:999px; border:1px solid #2a3236; background:#121417; color:#e7e9ea; cursor:pointer;
     font-size:13px; font-weight:700;
   }
   .chip.active{ background:var(--accent); color:#0b0f10; border-color:#27c08a }
 
-  .row-slim{ display:flex; gap:8px; align-items:center; flex-wrap:wrap }
   .totaltime{ text-align:center; font-size:42px; font-weight:900; letter-spacing:.3px }
   .totaltime small{ font-size:14px; color:var(--muted); font-weight:600; margin-left:6px }
   .startrow{ display:flex; gap:10px; justify-content:center; margin-top:6px }
@@ -83,9 +82,7 @@
   /* FULLSKÄRM: runda LED-prickar + flytande kontroller */
   body.fullscreen-mode .topbar,
   body.fullscreen-mode .clock,
-  body.fullscreen-mode .badge {
-    display: none !important;
-  }
+  body.fullscreen-mode .badge { display: none !important; }
   body.fullscreen-mode .wrap { padding: 0 }
   body.fullscreen-mode .card { background: none; border: none; box-shadow: none; padding: 0 }
   body.fullscreen-mode #lampWrap{
@@ -145,17 +142,15 @@
         </div>
       </div>
 
-      <div class="row-slim" style="margin-top:10px">
-        <div class="chips" id="themeChips">
-          <button class="chip active" data-scheme="gyr">Grön→Gul→Röd</button>
-          <button class="chip" data-scheme="rainbow">Regnbåge</button>
-          <button class="chip" data-scheme="white">Vit</button>
-        </div>
-       
-        <div class="chips" id="dirChips">
-          <button class="chip active" data-dir="ltr">Vänster→Höger</button>
-          <button class="chip" data-dir="rtl">Höger→Vänster</button>
-        </div>
+      <div class="chips" id="themeChips">
+        <button class="chip active" data-scheme="gyr">Grön→Gul→Röd</button>
+        <button class="chip" data-scheme="rainbow">Regnbåge</button>
+        <button class="chip" data-scheme="white">Vit</button>
+      </div>
+
+      <div class="chips" id="dirChips">
+        <button class="chip active" data-dir="ltr">Vänster→Höger</button>
+        <button class="chip" data-dir="rtl">Höger→Vänster</button>
         <label class="chip" style="display:flex;align-items:center;gap:8px">
           <input id="sound" type="checkbox" checked> Ljudsignal
         </label>
@@ -200,7 +195,7 @@
   /* ======= STATE ======= */
   const state = {
     lamps: 15, mpl: 2, perRow: 15,
-    scheme:'gyr', orderMode:'row', direction:'ltr',
+    scheme:'gyr', direction:'ltr',      // <-- alltid radvis; endast riktning kan ändras
     sound:true,
     running:false, paused:false, finished:false,
     off:0, elapsedInLampMs:0, stepMs: 2*60*1000,
@@ -231,23 +226,15 @@
   const fmtMS = ms => { ms=Math.max(0,ms|0); const s=Math.floor(ms/1000), m=Math.floor(s/60), sec=s%60; return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'); };
   function renderTotal(){ totalTimeDisplay.textContent = (state.lamps*state.mpl).toString(); }
 
+  // Alltid RADVIS ordning. Endast riktning (LTR/RTL) påverkar sekvensen.
   function buildOrderMap(){
     const cols = clamp(state.perRow,1,state.lamps);
     const rows = Math.ceil(state.lamps/cols);
     const order = [];
-    if(state.orderMode==='row'){
-      for(let r=0;r<rows;r++){
-        const dir = state.direction==='ltr';
-        for(let c=dir?0:cols-1; dir?c<cols:c>=0; c+=dir?1:-1){
-          const idx=r*cols+c; if(idx<state.lamps) order.push(idx);
-        }
-      }
-    }else{
-      const dir = state.direction==='ltr';
-      for(let c=dir?0:cols-1; dir?c<cols:c>=0; c+=dir?1:-1){
-        for(let r=0;r<rows;r++){
-          const idx=r*cols+c; if(idx<state.lamps) order.push(idx);
-        }
+    const ltr = state.direction==='ltr';
+    for(let r=0;r<rows;r++){
+      for(let c=ltr?0:cols-1; ltr?c<cols:c>=0; c+=ltr?1:-1){
+        const idx=r*cols+c; if(idx<state.lamps) order.push(idx);
       }
     }
     const map=new Map(); order.forEach((idx,pos)=>map.set(idx,pos)); return map;
@@ -347,19 +334,15 @@
   function stopTimer(){ if(state.tick){ clearInterval(state.tick); state.tick=null; } }
 
   /* ======= UI EVENTS ======= */
-  // Chips
+  // Tema
   document.getElementById('themeChips').addEventListener('click', (e)=>{
     const b = e.target.closest('.chip'); if(!b) return;
     state.scheme = b.dataset.scheme;
     document.querySelectorAll('#themeChips .chip').forEach(x=>x.classList.toggle('active', x===b));
     updateStep(); renderTotal(); orderMap=buildOrderMap(); renderPanel(); startPreviewOnce();
   });
-  document.getElementById('orderChips').addEventListener('click', (e)=>{
-    const b = e.target.closest('.chip'); if(!b) return;
-    state.orderMode = b.dataset.order;
-    document.querySelectorAll('#orderChips .chip').forEach(x=>x.classList.toggle('active', x===b));
-    orderMap=buildOrderMap(); renderPanel(); startPreviewOnce();
-  });
+
+  // Riktning
   document.getElementById('dirChips').addEventListener('click', (e)=>{
     const b = e.target.closest('.chip'); if(!b) return;
     state.direction = b.dataset.dir;
@@ -384,14 +367,12 @@
         val = clamp(val, 0.5, 60);
       }else if(field==='lamps'){
         val = clamp(val + delta, 5, 120);
-        // se till att perRow aldrig > lamps
         state.perRow = Math.min(state.perRow, val);
       }else if(field==='perRow'){
         val = clamp(val + delta, 1, Math.max(1,state.lamps));
       }
 
       state[field] = val;
-      // uppdatera UI-valsiffror
       document.getElementById('val-lamps').textContent = state.lamps;
       document.getElementById('val-mpl').textContent   = state.mpl;
       document.getElementById('val-perRow').textContent= state.perRow;

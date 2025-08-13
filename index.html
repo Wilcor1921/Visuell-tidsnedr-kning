@@ -7,8 +7,7 @@
 <style>
   :root{
     --bg:#0f1113; --panel:#171a1d; --panel2:#1a1d20ee; --text:#e7e9ea; --muted:#a7adb3;
-    --accent:#34d399; --border:#2b2f33; --pad:16px;
-    --cols: 15; /* sätts via JS vid render */
+    --accent:#34d399; --border:#2b2f33; --pad:16px; --cols: 15;
   }
   *{box-sizing:border-box}
   html,body{min-height:100%}
@@ -20,7 +19,7 @@
   }
 
   /* Sticky topp: snabba kontroller + stor total tid */
-  .topbar{ position:sticky; top:0; z-index:50; background:linear-gradient(180deg,#0f1113,#121417);
+  .topbar{ position:sticky; top:0; z-index:60; background:linear-gradient(180deg,#0f1113,#121417);
     border-bottom:1px solid var(--border); padding:10px var(--pad); }
   .topgrid{ display:grid; gap:10px; grid-template-columns: 1fr auto; align-items:center; }
   .totaltime{ text-align:center; font-size:34px; font-weight:800; letter-spacing:.3px; }
@@ -32,14 +31,13 @@
   .field label{ font-size:12px; color:var(--muted) }
   .field input[type=number], .field select{
     width:96px; max-width:45vw; padding:6px 8px; border-radius:8px; border:1px solid #2b2f33;
-    background:#0e1011; color:var(--text); font-size:14px;
+    background:#0e1011; color:#fff; font-size:14px;
   }
   .startrow{ display:flex; gap:8px; justify-content:center; margin-top:8px; }
   .btn{ cursor:pointer; padding:10px 14px; border-radius:12px; border:1px solid transparent; font-weight:700; font-size:14px }
   .btn.primary{ background:var(--accent); color:#0b0f10 }
-  .btn.ghost{ background:#22272b; color:var(--text); border-color:#30353a }
+  .btn.ghost{ background:#22272b; color:#fff; border-color:#30353a }
 
-  /* Avancerat (fälls ut) */
   .advanced{ background:var(--panel2); border-top:1px solid var(--border); padding:10px var(--pad) 14px; }
   details{ border:1px solid var(--border); border-radius:12px; overflow:hidden; background:#14171a }
   summary{ cursor:pointer; list-style:none; padding:12px 14px; font-weight:700; font-size:14px; background:#14171a; border-bottom:1px solid #1f2428 }
@@ -48,24 +46,22 @@
   .row{ display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-bottom:12px }
   .row label{ font-size:12px; color:var(--muted) }
   input[type=range]{ width:100% }
-  input[type=number]{ width:100px; padding:8px 10px; background:#0e1011; color:var(--text); border:1px solid var(--border); border-radius:10px }
+  input[type=number]{ width:100px; padding:8px 10px; background:#0e1011; color:#fff; border:1px solid var(--border); border-radius:10px }
   .choices{ display:flex; gap:8px; flex-wrap:wrap }
-  .choice{ padding:8px 10px; border-radius:10px; border:1px solid #3a3f44; background:#0e1011; color:var(--text); cursor:pointer; font-size:13px }
+  .choice{ padding:8px 10px; border-radius:10px; border:1px solid #3a3f44; background:#0e1011; color:#fff; cursor:pointer; font-size:13px }
   .choice.active{ background:var(--accent); color:#0b0f10; border-color:#27c08a }
 
-  /* Innehåll */
   .wrap{ padding:12px var(--pad) 24px }
   .card{ background:var(--panel2); border:1px solid var(--border); border-radius:16px; padding:14px;
     box-shadow:0 10px 30px rgba(0,0,0,.25); backdrop-filter: blur(6px); }
   .toprow{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px }
   .badge{ font-size:12px; color:#c5cbd1 }
-
   .grid-lamps{ display:grid; gap:6px }
 
-  /* Lampor */
+  /* Lampor i normal-läge: rektanglar (snygg preview) */
   .lamp{
     aspect-ratio: 4/3; min-height:32px; border-radius:12px;
-    transition: filter .2s ease, opacity .2s ease, background .2s ease;
+    transition: filter .25s ease, opacity .25s ease, background .25s ease;
     box-shadow: inset 0 0 0 1px rgba(255,255,255,.45), 0 6px 14px rgba(0,0,0,.25);
   }
   .lamp.off{ filter:grayscale(60%) brightness(40%) contrast(80%); opacity:.35; box-shadow: inset 0 0 0 1px #3a3a3a }
@@ -81,7 +77,7 @@
     .startrow{ justify-content:flex-end }
   }
 
-  /* ===== HELSKÄRMSLÄGE (visa ENDAST lamporna) ===== */
+  /* ===== FULLSKÄRMSLÄGE: bara LED-cirklar + flytande kontroller ===== */
   body.fullscreen-mode .topbar,
   body.fullscreen-mode .advanced,
   body.fullscreen-mode .clock,
@@ -91,68 +87,79 @@
     display: none !important;
   }
   body.fullscreen-mode .wrap { padding: 0 }
-  body.fullscreen-mode .card {
-    background: none; border: none; box-shadow: none; padding: 0;
-  }
+  body.fullscreen-mode .card { background: none; border: none; box-shadow: none; padding: 0 }
   body.fullscreen-mode #lampWrap{
-    height: 100vh;
-    width: 100vw;
-    gap: 2px;
-    padding: 2px;
-    box-sizing: border-box;
-    display: grid;
-    grid-template-columns: repeat(var(--cols), 1fr);
-    grid-auto-rows: 1fr;               /* fyll höjden jämnt */
+    height: 100vh; width: 100vw; gap: 6px; padding: 10px; box-sizing: border-box;
+    display: grid; grid-template-columns: repeat(var(--cols), 1fr); grid-auto-rows: 1fr;
   }
   body.fullscreen-mode .lamp{
-    aspect-ratio:auto;                 /* låt rutorna bli kvadratiska/rektangulära efter plats */
-    border-radius:8px;
+    aspect-ratio: 1 / 1;           /* gör dem kvadratiska */
+    border-radius: 9999px;         /* ...och runda */
+    box-shadow: 0 0 0 2px rgba(255,255,255,.15), 0 8px 20px rgba(0,0,0,.35);
   }
+
+  /* Flytande kontrollpanel i fullskärm */
+  .fs-controls{
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: max(12px, env(safe-area-inset-bottom));
+    display: none; z-index: 70;
+    background: rgba(0,0,0,.55); backdrop-filter: blur(6px);
+    border: 1px solid #2b2f33; border-radius: 999px; padding: 8px;
+  }
+  .fs-controls.show{ display:flex; gap:8px; align-items:center }
+  .fs-btn{
+    cursor:pointer; padding:10px 14px; border-radius:999px; border:1px solid #3a3f44;
+    background:#121417; color:#e7e9ea; font-weight:700; font-size:14px;
+  }
+  .fs-btn.primary{ background:var(--accent); color:#0b0f10; border-color:#27c08a }
+
+  /* 3-2-1 countdown overlay (kvar om du vill) */
+  .overlay{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:80 }
+  .overlay.show{ display:flex }
+  .countdown{ background:rgba(0,0,0,.6); color:#fff; font-size:24vw; font-weight:900; line-height:1 }
 </style>
 </head>
 <body>
 
-<!-- STICKY: snabba kontroller -->
+<!-- Sticky top -->
 <div class="topbar">
   <div class="topgrid">
     <div class="quick-controls">
       <div class="field"><label>Lampor</label><input type="number" id="lampCount" value="15" min="5" max="120"></div>
       <div class="field"><label>Min/lampa</label><input type="number" id="minutesPerLamp" value="2" min="0.5" step="0.5" max="60"></div>
       <div class="field"><label>Per rad</label><input type="number" id="lampsPerRow" value="15" min="1" max="120"></div>
-      <div class="field">
-        <label>Tema</label>
+      <div class="field"><label>Tema</label>
         <select id="colorTheme">
           <option value="gyr">Grön→Gul→Röd</option>
           <option value="rainbow">Regnbåge</option>
           <option value="white">Vit</option>
         </select>
       </div>
-      <div class="field">
-        <label>Ordning</label>
+      <div class="field"><label>Ordning</label>
         <select id="orderMode">
           <option value="row">Radvis</option>
           <option value="col">Kolumnvis</option>
         </select>
       </div>
-      <div class="field">
-        <label>Riktning</label>
+      <div class="field"><label>Riktning</label>
         <select id="direction">
-          <option value="ltr">Vänster → Höger</option>
-          <option value="rtl">Höger → Vänster</option>
+          <option value="ltr">Vänster→Höger</option>
+          <option value="rtl">Höger→Vänster</option>
         </select>
       </div>
     </div>
 
-    <div class="totaltime"><span id="totalTimeDisplay">30</span><small>min</small></div>
-
-    <div class="startrow">
-      <button class="btn primary" id="startBtn">Starta i fullskärm</button>
-      <button class="btn ghost" id="resetBtn" style="display:none">Nollställ</button>
+    <div>
+      <div class="totaltime"><span id="totalTimeDisplay">30</span><small>min</small></div>
+      <div class="startrow">
+        <button class="btn primary" id="startBtn">Starta i fullskärm</button>
+        <button class="btn ghost" id="resetBtn" style="display:none">Nollställ</button>
+      </div>
     </div>
   </div>
 </div>
 
-<!-- Avancerade inställningar -->
+<!-- Avancerat -->
 <div class="advanced">
   <details>
     <summary>Fler inställningar</summary>
@@ -179,7 +186,7 @@
   </details>
 </div>
 
-<!-- Innehåll: förhandsvisning/timer -->
+<!-- Innehåll -->
 <div class="wrap">
   <div class="card">
     <div class="toprow">
@@ -191,12 +198,22 @@
   </div>
 </div>
 
+<!-- Fullscreen flytande kontroller -->
+<div class="fs-controls" id="fsControls">
+  <button class="fs-btn primary" id="fsPauseBtn">Pausa</button>
+  <button class="fs-btn" id="fsExitBtn">Avsluta fullskärm</button>
+</div>
+
+<!-- 3-2-1 overlay (valfritt) -->
+<div class="overlay" id="countOverlay"><div class="countdown" id="countNum">3</div></div>
+
 <script>
   // ======= STATE =======
   const state = {
-    lamps: 15, mpl: 2, perRow: 15, scheme: 'gyr',
-    orderMode: 'row', direction: 'ltr',
-    sound: true, running: false, paused: false, finished: false,
+    lamps: 15, mpl: 2, perRow: 15,
+    scheme: 'gyr', orderMode: 'row', direction: 'ltr',
+    sound: true,
+    running: false, paused: false, finished: false,
     off: 0, elapsedInLampMs: 0, stepMs: 2*60*1000,
     previewTimer: null, tick: null,
     wakeLock: null, audioCtx: null
@@ -205,63 +222,61 @@
   // ======= ELEMENTS =======
   const $ = id => document.getElementById(id);
   const lampCount = $('lampCount'), minutesPerLamp = $('minutesPerLamp'), lampsPerRow = $('lampsPerRow');
-  const colorTheme = $('colorTheme'), orderModeSel = $('orderMode'), directionSel = $('direction');
+  const colorTheme = $('colorTheme'), orderModeSel = $('orderMode'), directionSel=$('direction');
   const totalTimeDisplay = $('totalTimeDisplay');
-  const lampsRange = $('lampsRange'), mplRange = $('mplRange'), perRowRange = $('perRowRange'), soundCb = $('sound');
-  const startBtn = $('startBtn'), resetBtn = $('resetBtn');
-  const lampWrap = $('lampWrap'), clock = $('clock'), progressFill = $('progressFill'), panelBadge = $('panelBadge');
+  const lampsRange=$('lampsRange'), mplRange=$('mplRange'), perRowRange=$('perRowRange'), soundCb=$('sound');
+  const startBtn=$('startBtn'), resetBtn=$('resetBtn');
+  const lampWrap=$('lampWrap'), clock=$('clock'), progressFill=$('progressFill'), panelBadge=$('panelBadge');
+  const themeChoices = $('themeChoices');
+  const fsControls = $('fsControls'), fsPauseBtn=$('fsPauseBtn'), fsExitBtn=$('fsExitBtn');
+  const countOverlay=$('countOverlay'), countNum=$('countNum');
 
   // ======= HELPERS =======
-  function clamp(v,mi,ma){ return Math.max(mi, Math.min(ma, v)); }
+  const clamp=(v,mi,ma)=>Math.max(mi,Math.min(ma,v));
   function updateStep(){ state.stepMs = Math.max(10, state.mpl * 60 * 1000); }
-  function hueCss(h){ return `linear-gradient(180deg, hsl(${h} 90% 60%), hsl(${h} 80% 50%))`; }
+  const hueCss=h=>`linear-gradient(180deg, hsl(${h} 90% 60%), hsl(${h} 80% 50%))`;
   function colorFor(i,total){
     const t = total<=1 ? 0 : i/(total-1);
     if(state.scheme==='white') return 'linear-gradient(180deg,#f3f4f6,#d1d5db)';
-    if(state.scheme==='gyr'){ const hue = 120 * (1 - t); return hueCss(hue); }
-    const hue = 240 + 360 * (1 - t); return hueCss(hue); // rainbow
+    if(state.scheme==='gyr'){ const hue = 120*(1-t); return hueCss(hue); }
+    const hue = 240 + 360*(1-t); return hueCss(hue); // rainbow
   }
-  function dimStyle(base){ return `filter:grayscale(60%) brightness(40%) contrast(80%);opacity:.35;box-shadow:inset 0 0 0 1px #3a3a3a;background:${base}`; }
-  function formatMS(ms){ ms=Math.max(0,ms|0); const s=Math.floor(ms/1000), m=Math.floor(s/60), sec=s%60; return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'); }
+  const dimStyle = base => `filter:grayscale(60%) brightness(40%) contrast(80%);opacity:.35;box-shadow:inset 0 0 0 1px #3a3a3a;background:${base}`;
+  const fmtMS = (ms)=>{ ms=Math.max(0,ms|0); const s=Math.floor(ms/1000), m=Math.floor(s/60), sec=s%60; return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'); };
   function renderTotal(){ totalTimeDisplay.textContent = (state.lamps * state.mpl).toString(); }
 
-  // Bygg släck-ordning (map index -> position i ordning)
   function buildOrderMap(){
     const cols = clamp(state.perRow,1,state.lamps);
     const rows = Math.ceil(state.lamps/cols);
     const order = [];
-    if(state.orderMode === 'row'){
+    if(state.orderMode==='row'){
       for(let r=0;r<rows;r++){
-        const cStart = (state.direction==='ltr') ? 0 : cols-1;
-        const cStep  = (state.direction==='ltr') ? 1 : -1;
-        for(let c=cStart; (state.direction==='ltr')? (c<cols) : (c>=0); c+=cStep){
-          const idx = r*cols + c;
-          if(idx < state.lamps) order.push(idx);
+        const dir = state.direction==='ltr';
+        for(let c=dir?0:cols-1; dir?c<cols:c>=0; c+=dir?1:-1){
+          const idx=r*cols+c; if(idx<state.lamps) order.push(idx);
         }
       }
-    } else {
-      const cStart = (state.direction==='ltr') ? 0 : cols-1;
-      const cStep  = (state.direction==='ltr') ? 1 : -1;
-      for(let c=cStart; (state.direction==='ltr')? (c<cols) : (c>=0); c+=cStep){
+    }else{
+      const dir = state.direction==='ltr';
+      for(let c=dir?0:cols-1; dir?c<cols:c>=0; c+=dir?1:-1){
         for(let r=0;r<rows;r++){
-          const idx = r*cols + c;
-          if(idx < state.lamps) order.push(idx);
+          const idx=r*cols+c; if(idx<state.lamps) order.push(idx);
         }
       }
     }
-    const map = new Map(); order.forEach((idx,pos)=>map.set(idx,pos)); return map;
+    const map=new Map(); order.forEach((idx,pos)=>map.set(idx,pos)); return map;
   }
   let orderMap = buildOrderMap();
 
   function renderLamps(offCount){
     const cols = clamp(state.perRow,1,state.lamps);
-    document.documentElement.style.setProperty('--cols', cols); // styr fullscreen-grid
+    document.documentElement.style.setProperty('--cols', cols);
     lampWrap.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
     lampWrap.innerHTML = '';
     for(let i=0;i<state.lamps;i++){
       const base = colorFor(i, state.lamps);
       const pos = orderMap.get(i) ?? i;
-      const isOff = pos < offCount;               // släck första 'offCount' i ordningen
+      const isOff = pos < offCount;               // släck första 'offCount'
       const div = document.createElement('div');
       div.className = 'lamp' + (isOff?' off':'');
       div.style = isOff ? dimStyle(base) : `background:${base}`;
@@ -273,27 +288,26 @@
     const totalMs = state.lamps*state.stepMs;
     const elapsedMs = state.off*state.stepMs + state.elapsedInLampMs;
     const remainingMs = totalMs - elapsedMs;
-    clock.textContent = formatMS(remainingMs);
+    clock.textContent = fmtMS(remainingMs);
     const ratio = totalMs>0 ? Math.min(1, Math.max(0, elapsedMs/totalMs)) : 0;
     progressFill.style.width = (ratio*100).toFixed(3) + '%';
   }
 
   function renderPanel(){
     panelBadge.textContent = `${state.lamps} × ${state.mpl} min`;
-    renderLamps(state.off);                 // alla lampor tända → släcker de första 'off'
+    renderLamps(state.off);
     renderClockAndProgress();
     resetBtn.style.display = (state.running || state.finished) ? 'inline-block' : 'none';
+    // uppdatera pausknappstext om i fullskärm
+    fsPauseBtn.textContent = state.paused ? 'Fortsätt' : 'Pausa';
   }
 
-  // Demo: kör en gång per ändring
+  // Demo: en gång per ändring
   function startPreviewOnce(){
-    stopPreview();
-    state.off = 0;
-    renderPanel();
+    stopPreview(); state.off=0; renderPanel();
     state.previewTimer = setInterval(()=>{
-      state.off += 1;
-      renderPanel();
-      if(state.off >= state.lamps){ stopPreview(); state.off = 0; renderPanel(); }
+      state.off += 1; renderPanel();
+      if(state.off >= state.lamps){ stopPreview(); state.off=0; renderPanel(); }
     }, 120);
   }
   function stopPreview(){ if(state.previewTimer){ clearInterval(state.previewTimer); state.previewTimer=null; } }
@@ -303,33 +317,44 @@
     try{
       const ctx = state.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
       state.audioCtx = ctx;
-      const o = ctx.createOscillator(); const g = ctx.createGain();
-      o.type='sine'; o.frequency.value = 880; g.gain.value = 0.001;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type='sine'; o.frequency.value=880; g.gain.value=0.0001;
       o.connect(g); g.connect(ctx.destination); o.start();
-      const now = ctx.currentTime;
+      const now=ctx.currentTime;
       g.gain.exponentialRampToValueAtTime(0.2, now + 0.05);
-      g.gain.exponentialRampToValueAtTime(0.001, now + 1.2);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
       o.stop(now + 1.25);
     }catch(e){}
   }
 
-  // Wake Lock & Fullscreen
+  // Wake & Fullscreen
   async function requestWake(){ try{ if('wakeLock' in navigator){ state.wakeLock = await navigator.wakeLock.request('screen'); } }catch(e){} }
   async function releaseWake(){ try{ await state.wakeLock?.release?.(); state.wakeLock=null; }catch(e){} }
   async function enterFs(){ try{ await document.documentElement.requestFullscreen?.(); if (screen.orientation?.lock) { try{ await screen.orientation.lock('landscape'); }catch(e){} } }catch(e){} }
   async function exitFs(){ try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){} }
 
+  // 3-2-1 overlay (valfritt, snabbt)
+  async function startCountDownOverlay(){
+    countOverlay.classList.add('show');
+    for(const n of ['3','2','1']){
+      countNum.textContent = n;
+      await new Promise(r=>setTimeout(r, 600));
+    }
+    countOverlay.classList.remove('show');
+  }
+
   // TIMER
   function startTimer(){
     state.tick = setInterval(()=>{
-      if(!state.running || state.paused || state.finished) return;
+      if(!state.running || state.finished || state.paused) return;
       state.elapsedInLampMs += 200;
       if(state.elapsedInLampMs >= state.stepMs){
         state.elapsedInLampMs -= state.stepMs;
-        state.off += 1;                              // släck nästa i ordningen
+        state.off += 1;
         if(state.off >= state.lamps){
           state.finished = true; state.running = false;
-          if(state.sound) beep(); // stanna i helskärm tills Nollställ
+          if(state.sound) beep();
+          // vi lämnar fullskärm manuellt om man vill (via knappen)
         }
       }
       renderPanel();
@@ -337,12 +362,16 @@
   }
   function stopTimer(){ if(state.tick){ clearInterval(state.tick); state.tick=null; } }
 
-  // Synk & apply
+  // Synk
   function syncRanges(){ lampsRange.value = state.lamps; mplRange.value = state.mpl; perRowRange.value = state.perRow; }
-  function syncQuick(){ lampCount.value = state.lamps; minutesPerLamp.value = state.mpl; lampsPerRow.value = state.perRow; colorTheme.value = state.scheme; orderModeSel.value = state.orderMode; directionSel.value = state.direction; }
+  function syncQuick(){
+    lampCount.value = state.lamps; minutesPerLamp.value = state.mpl; lampsPerRow.value = state.perRow;
+    colorTheme.value = state.scheme; orderModeSel.value=state.orderMode; directionSel.value=state.direction;
+    soundCb.checked = state.sound;
+  }
   function applyAndPreview(){ updateStep(); renderTotal(); orderMap = buildOrderMap(); renderPanel(); startPreviewOnce(); }
 
-  // Quick controls
+  // Events – quick controls
   lampCount.addEventListener('input', ()=>{ state.lamps = clamp(+lampCount.value,5,120); syncRanges(); applyAndPreview(); });
   minutesPerLamp.addEventListener('input', ()=>{ state.mpl = clamp(+minutesPerLamp.value||0.5,0.5,60); syncRanges(); applyAndPreview(); });
   lampsPerRow.addEventListener('input', ()=>{ state.perRow = clamp(+lampsPerRow.value,1,120); syncRanges(); applyAndPreview(); });
@@ -350,42 +379,82 @@
   orderModeSel.addEventListener('change', ()=>{ state.orderMode = orderModeSel.value; applyAndPreview(); });
   directionSel.addEventListener('change', ()=>{ state.direction = directionSel.value; applyAndPreview(); });
 
-  // Sliders + avancerat
+  // Sliders + tema-knappar
   lampsRange.addEventListener('input', ()=>{ state.lamps = clamp(+lampsRange.value,5,120); syncQuick(); applyAndPreview(); });
   mplRange.addEventListener('input', ()=>{ state.mpl = clamp(+mplRange.value,0.5,60); syncQuick(); applyAndPreview(); });
   perRowRange.addEventListener('input', ()=>{ state.perRow = clamp(+perRowRange.value,1,120); syncQuick(); applyAndPreview(); });
-
-  // Tema-knappar
-  document.getElementById('themeChoices').addEventListener('click', (e)=>{
+  themeChoices.addEventListener('click', (e)=>{
     const b = e.target.closest('.choice'); if(!b) return;
     state.scheme = b.dataset.scheme;
     document.querySelectorAll('.choice').forEach(x=>x.classList.toggle('active', x.dataset.scheme===state.scheme));
     applyAndPreview();
   });
 
-  // Ljud
-  soundCb.addEventListener('change', ()=>{ state.sound = soundCb.checked; });
-
-  // Start/Reset
+  // Start / Reset
   startBtn.addEventListener('click', async ()=>{
-    document.body.classList.add('fullscreen-mode');   // << Visa BARA lamporna
+    document.body.classList.add('fullscreen-mode');
+    $('fsControls').classList.add('show');
+    await startCountDownOverlay();
     await enterFs(); await requestWake();
     stopPreview();
-    state.running = true; state.paused=false; state.finished=false;
-    state.off = 0; state.elapsedInLampMs = 0;          // alla tända vid start
+    state.running = true; state.finished=false; state.paused=false;
+    state.off = 0; state.elapsedInLampMs = 0;  // alla tända vid start
     renderPanel(); startTimer();
   });
 
   resetBtn.addEventListener('click', async ()=>{
-    document.body.classList.remove('fullscreen-mode'); // << Återgå från helskärm
-    state.running=false; state.paused=false; state.finished=false;
+    // nollställ och lämna ev. fullskärm
+    document.body.classList.remove('fullscreen-mode');
+    $('fsControls').classList.remove('show');
+    state.running=false; state.finished=false; state.paused=false;
     state.off=0; state.elapsedInLampMs=0;
     stopTimer(); await releaseWake(); await exitFs(); applyAndPreview();
   });
 
+  // ===== Fullscreen: PAUSA & AVSLUTA =====
+  fsPauseBtn.addEventListener('click', ()=>{
+    state.paused = !state.paused;
+    fsPauseBtn.textContent = state.paused ? 'Fortsätt' : 'Pausa';
+  });
+  fsExitBtn.addEventListener('click', async ()=>{
+    // lämna bara fullskärm (timern fortsätter i bakgrunden)
+    document.body.classList.remove('fullscreen-mode');
+    $('fsControls').classList.remove('show');
+    await releaseWake();
+    await exitFs();
+  });
+
+  // Tangenter: mellanslag = pausa/fortsätt, Esc = lämna fullskärm, F = toggla fullskärm
+  window.addEventListener('keydown', async (e)=>{
+    if(e.code==='Space'){
+      if(state.running && !state.finished){
+        state.paused = !state.paused;
+        fsPauseBtn.textContent = state.paused ? 'Fortsätt' : 'Pausa';
+        e.preventDefault();
+      }
+    } else if(e.key==='Escape'){
+      if(document.body.classList.contains('fullscreen-mode')){
+        document.body.classList.remove('fullscreen-mode');
+        $('fsControls').classList.remove('show');
+        await releaseWake(); await exitFs();
+      }
+    } else if(e.key.toLowerCase()==='f'){
+      if(!document.fullscreenElement){
+        document.body.classList.add('fullscreen-mode');
+        $('fsControls').classList.add('show');
+        await enterFs(); await requestWake();
+      }else{
+        document.body.classList.remove('fullscreen-mode');
+        $('fsControls').classList.remove('show');
+        await releaseWake(); await exitFs();
+      }
+    }
+  });
+
   // Init
   function init(){
-    renderTotal(); syncRanges(); syncQuick(); orderMap = buildOrderMap(); renderPanel(); startPreviewOnce();
+    updateStep(); renderTotal(); syncRanges(); syncQuick();
+    orderMap = buildOrderMap(); renderPanel(); startPreviewOnce();
   }
   setTimeout(init,0);
 </script>

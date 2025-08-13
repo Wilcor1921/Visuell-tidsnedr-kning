@@ -105,7 +105,7 @@
     background:#121417; color:#e7e9ea; font-weight:700; font-size:14px; }
   .fs-btn.primary{ background:var(--accent); color:#0b0f10; border-color:#27c08a }
 
-  /* 3-2-1 overlay (valfritt) */
+  /* 3-2-1 overlay (behålls, men hindrar inte FS-anropet) */
   .overlay{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:80 }
   .overlay.show{ display:flex }
   .countdown{ background:rgba(0,0,0,.6); color:#fff; font-size:24vw; font-weight:900; line-height:1 }
@@ -195,7 +195,7 @@
   /* ======= STATE ======= */
   const state = {
     lamps: 15, mpl: 2, perRow: 15,
-    scheme:'gyr', direction:'ltr',      // <-- alltid radvis; endast riktning kan ändras
+    scheme:'gyr', direction:'ltr',      // Alltid RADVIS; endast riktning
     sound:true,
     running:false, paused:false, finished:false,
     off:0, elapsedInLampMs:0, stepMs: 2*60*1000,
@@ -226,7 +226,7 @@
   const fmtMS = ms => { ms=Math.max(0,ms|0); const s=Math.floor(ms/1000), m=Math.floor(s/60), sec=s%60; return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'); };
   function renderTotal(){ totalTimeDisplay.textContent = (state.lamps*state.mpl).toString(); }
 
-  // Alltid RADVIS ordning. Endast riktning (LTR/RTL) påverkar sekvensen.
+  // Alltid RADVIS ordning
   function buildOrderMap(){
     const cols = clamp(state.perRow,1,state.lamps);
     const rows = Math.ceil(state.lamps/cols);
@@ -274,7 +274,7 @@
     fsPauseBtn.textContent = state.paused ? 'Fortsätt' : 'Pausa';
   }
 
-  // Demo en gång per ändring
+  // Demo en gång per ändring/vid start
   function startPreviewOnce(){
     stopPreview(); state.off = 0; renderPanel();
     state.previewTimer = setInterval(()=>{
@@ -302,21 +302,29 @@
   // Wake & FS
   async function requestWake(){ try{ if('wakeLock' in navigator){ state.wakeLock = await navigator.wakeLock.request('screen'); } }catch(e){} }
   async function releaseWake(){ try{ await state.wakeLock?.release?.(); state.wakeLock=null; }catch(e){} }
-  async function enterFs(){ try{ await document.documentElement.requestFullscreen?.(); if (screen.orientation?.lock) { try{ await screen.orientation.lock('landscape'); }catch(e){} } }catch(e){} }
+  async function enterFs(){
+    try{
+      // begär fullskärm direkt på klick (viktigt för mobil)
+      await document.documentElement.requestFullscreen?.();
+      if (screen.orientation?.lock) { try{ await screen.orientation.lock('landscape'); }catch(e){} }
+    }catch(e){}
+  }
   async function exitFs(){ try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){} }
 
-  // 3-2-1 overlay (snabb)
-  async function startCountDownOverlay(){
+  // 3-2-1 overlay (krockar inte med FS längre)
+  function showCountdown(){
+    countNum.textContent='3';
     countOverlay.classList.add('show');
-    for(const n of ['3','2','1']){
-      countNum.textContent = n;
-      await new Promise(r=>setTimeout(r, 600));
-    }
-    countOverlay.classList.remove('show');
+    let i=3;
+    const t = setInterval(()=>{
+      i--; countNum.textContent= i>0 ? String(i) : 'Start!';
+      if(i<=0){ clearInterval(t); setTimeout(()=>countOverlay.classList.remove('show'), 400); }
+    }, 500);
   }
 
   // Timer
   function startTimer(){
+    if(state.tick) clearInterval(state.tick);
     state.tick = setInterval(()=>{
       if(!state.running || state.finished || state.paused) return;
       state.elapsedInLampMs += 200;
@@ -345,8 +353,10 @@
   // Riktning
   document.getElementById('dirChips').addEventListener('click', (e)=>{
     const b = e.target.closest('.chip'); if(!b) return;
-    state.direction = b.dataset.dir;
-    document.querySelectorAll('#dirChips .chip').forEach(x=>x.classList.toggle('active', x===b));
+    const dir = b.dataset.dir;
+    if(!dir) return;
+    state.direction = dir;
+    document.querySelectorAll('#dirChips .chip[data-dir]').forEach(x=>x.classList.toggle('active', x===b));
     orderMap=buildOrderMap(); renderPanel(); startPreviewOnce();
   });
 
@@ -371,8 +381,9 @@
       }else if(field==='perRow'){
         val = clamp(val + delta, 1, Math.max(1,state.lamps));
       }
-
       state[field] = val;
+
+      // uppdatera UI-värden
       document.getElementById('val-lamps').textContent = state.lamps;
       document.getElementById('val-mpl').textContent   = state.mpl;
       document.getElementById('val-perRow').textContent= state.perRow;
@@ -384,10 +395,12 @@
 
   // Start / Reset
   startBtn.addEventListener('click', async ()=>{
+    // Först försök FS/Wake direkt (user gesture), sen kör vi allt annat
+    enterFs(); requestWake(); // medvetet utan await för att inte blockera
     document.body.classList.add('fullscreen-mode');
-    $('fsControls').classList.add('show');
-    await startCountDownOverlay();
-    await enterFs(); await requestWake();
+    fsControls.classList.add('show');
+    showCountdown();
+
     stopPreview();
     state.running = true; state.finished=false; state.paused=false;
     state.off = 0; state.elapsedInLampMs = 0;  // alla tända vid start
@@ -396,10 +409,11 @@
 
   resetBtn.addEventListener('click', async ()=>{
     document.body.classList.remove('fullscreen-mode');
-    $('fsControls').classList.remove('show');
+    fsControls.classList.remove('show');
     state.running=false; state.finished=false; state.paused=false;
     state.off=0; state.elapsedInLampMs=0;
-    stopTimer(); await releaseWake(); await exitFs(); updateStep(); renderTotal(); orderMap=buildOrderMap(); renderPanel(); startPreviewOnce();
+    stopTimer(); await releaseWake(); await exitFs();
+    updateStep(); renderTotal(); orderMap=buildOrderMap(); renderPanel(); startPreviewOnce();
   });
 
   // Fullskärm: pausa/avsluta
@@ -409,7 +423,7 @@
   });
   fsExitBtn.addEventListener('click', async ()=>{
     document.body.classList.remove('fullscreen-mode');
-    $('fsControls').classList.remove('show');
+    fsControls.classList.remove('show');
     await releaseWake(); await exitFs();
   });
 
@@ -424,22 +438,28 @@
     } else if(e.key==='Escape'){
       if(document.body.classList.contains('fullscreen-mode')){
         document.body.classList.remove('fullscreen-mode');
-        $('fsControls').classList.remove('show');
+        fsControls.classList.remove('show');
         await releaseWake(); await exitFs();
       }
     }
   });
 
-  // Init
+  // Init (kör demo direkt)
   function init(){
     document.getElementById('val-lamps').textContent = state.lamps;
     document.getElementById('val-mpl').textContent   = state.mpl;
     document.getElementById('val-perRow').textContent= state.perRow;
     updateStep(); renderTotal();
     orderMap = buildOrderMap();
-    renderPanel(); startPreviewOnce();
+    renderPanel();
+    startPreviewOnce(); // ← demo direkt vid start
   }
-  setTimeout(init,0);
+  // Säkerställ att DOM finns:
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  }else{
+    init();
+  }
 </script>
 </body>
 </html>

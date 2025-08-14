@@ -5,237 +5,465 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Visuell Tidsnedräknare</title>
 <style>
-:root {
-  --bg: #0f1113;
-  --panel: #171a1d;
-  --panel2: #1a1d20ee;
-  --text: #e7e9ea;
-  --muted: #a7adb3;
-  --border: #2b2f33;
-}
-* { box-sizing: border-box; }
-body {
-  margin: 0;
-  font-family: sans-serif;
-  background: var(--bg);
-  color: var(--text);
-}
-#controls {
-  padding: 10px;
-  background: var(--panel);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  justify-content: center;
-}
-.control {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  background: var(--panel2);
-  padding: 8px 12px;
-  border-radius: 8px;
-}
-.control button {
-  background: #333;
-  color: white;
-  border: none;
-  padding: 6px 10px;
-  font-size: 18px;
-  border-radius: 6px;
-}
-.control span {
-  min-width: 32px;
-  text-align: center;
-  font-weight: bold;
-  font-size: 16px;
-}
-#totalTime {
-  font-size: 24px;
-  font-weight: bold;
-  text-align: center;
-  padding: 8px;
-}
-#lampWrap {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20px, 1fr));
-  gap: 6px;
-  padding: 20px;
-  justify-items: center;
-}
-.lamp {
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: grey;
-  transition: background 0.6s ease;
-}
-.fullscreen-mode {
-  background: var(--bg);
-}
-.fullscreen-mode #lampWrap {
-  height: 100vh;
-  width: 100vw;
-  display: grid;
-  place-items: center;
-  grid-template-columns: repeat(auto-fit, minmax(20px, 1fr));
-  gap: 10px;
-}
-#fullscreenControls {
-  position: fixed;
-  bottom: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  display: flex;
-  gap: 10px;
-}
-#fullscreenControls button {
-  background: #333;
-  color: white;
-  border: none;
-  padding: 8px 12px;
-  border-radius: 6px;
-  font-size: 14px;
-}
+  :root{
+    --bg:#0f1113; --panel:#171a1d; --panel2:#1a1d20ee; --text:#e7e9ea; --muted:#a7adb3;
+    --accent:#34d399; --border:#2b2f33; --pad:16px; --cols: 15;
+  }
+  *{box-sizing:border-box}
+  html,body{min-height:100%}
+  body{
+    margin:0; padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    background:var(--bg); color:var(--text);
+    font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+    -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+  }
+
+  /* Topbar */
+  .topbar{ position:sticky; top:0; z-index:60; background:linear-gradient(180deg,#0f1113,#121417);
+    border-bottom:1px solid var(--border); padding:10px var(--pad); }
+  .topgrid{ display:grid; gap:12px; grid-template-columns: 1fr auto; align-items:center; }
+
+  /* Stepprare – mobilvänliga men inte enorma */
+  .steppers{ display:grid; gap:10px; grid-template-columns: repeat(3, minmax(0,1fr)); }
+  .stepper{
+    background:#121417; border:1px solid var(--border); border-radius:14px; padding:10px 12px;
+    display:grid; grid-template-columns: auto 1fr auto; align-items:center; gap:10px;
+  }
+  .stepper label{ font-size:12px; color:var(--muted); grid-column: 1 / -1 }
+  .stepper .btn{
+    width:46px; height:46px; border-radius:12px; border:1px solid #2b2f33; background:#0e1011; color:#e7e9ea;
+    font-size:22px; font-weight:900; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none;
+    touch-action: manipulation;
+  }
+  .stepper .val{ text-align:center; font-size:20px; font-weight:800; min-width:48px }
+
+  /* Chips */
+  .chips{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px }
+  .chip{
+    padding:8px 12px; border-radius:999px; border:1px solid #2a3236; background:#121417; color:#e7e9ea; cursor:pointer;
+    font-size:13px; font-weight:700;
+  }
+  .chip.active{ background:var(--accent); color:#0b0f10; border-color:#27c08a }
+
+  .totaltime{ text-align:center; font-size:42px; font-weight:900; letter-spacing:.3px }
+  .totaltime small{ font-size:14px; color:var(--muted); font-weight:600; margin-left:6px }
+  .startrow{ display:flex; gap:10px; justify-content:center; margin-top:6px }
+  .btn-lg{ cursor:pointer; padding:12px 16px; border-radius:12px; border:1px solid transparent; font-weight:800; font-size:16px }
+  .btn-primary{ background:var(--accent); color:#0b0f10 }
+  .btn-ghost{ background:#22272b; color:#fff; border-color:#30353a }
+
+  /* Innehåll */
+  .wrap{ padding:12px var(--pad) 24px }
+  .card{ background:var(--panel2); border:1px solid var(--border); border-radius:16px; padding:14px;
+    box-shadow:0 10px 30px rgba(0,0,0,.25); backdrop-filter: blur(6px); }
+  .toprow{ display:flex; align-items:center; justify-content:space-between; margin-bottom:8px }
+  .badge{ font-size:12px; color:#c5cbd1 }
+  .grid-lamps{ display:grid; gap:6px }
+
+  /* Förhandsvisning i normalt läge – rektanglar med mjuk fade */
+  .lamp{
+    aspect-ratio: 4/3; min-height:30px; border-radius:12px;
+    transition: filter .35s ease, opacity .35s ease, background .35s ease;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,.45), 0 6px 14px rgba(0,0,0,.25);
+  }
+  .lamp.off{ filter:grayscale(60%) brightness(40%) contrast(80%); opacity:.35; box-shadow: inset 0 0 0 1px #3a3a3a }
+
+  .clock{ margin-top:10px; text-align:center; font-variant-numeric:tabular-nums; font-size:22px; color:#dff3ee }
+  .progress{ height:6px; background:#2b2f33; border-radius:999px; overflow:hidden; margin-top:8px }
+  .progress > div{ height:100%; width:0; background:linear-gradient(90deg,#34d399,#22d3ee) }
+
+  @media (max-width: 920px){
+    .topgrid{ grid-template-columns: 1fr }
+    .steppers{ grid-template-columns: 1fr }
+  }
+  @media (min-width: 980px){
+    .wrap{ display:grid; grid-template-columns: 1.1fr 2fr; gap:16px }
+  }
+
+  /* FULLSKÄRM: runda LED-prickar, centrerade + flytande kontroller */
+  body.fullscreen-mode .topbar,
+  body.fullscreen-mode .clock,
+  body.fullscreen-mode .badge { display: none !important; }
+  body.fullscreen-mode .wrap { padding: 0 }
+  body.fullscreen-mode .card { background: none; border: none; box-shadow: none; padding: 0 }
+  body.fullscreen-mode #lampWrap{
+    height: 100vh; width: 100vw; padding: 10px; box-sizing: border-box;
+    display: grid;
+    place-content: center;                 /* centrera hela rutnätet */
+    gap: 10px;
+    grid-template-columns: repeat(var(--cols), min(9vmin, 70px));
+    grid-auto-rows: min(9vmin, 70px);      /* kvadratiska, runda */
+  }
+  body.fullscreen-mode .lamp{
+    aspect-ratio: 1 / 1; border-radius: 9999px;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.15), 0 8px 20px rgba(0,0,0,.35);
+  }
+
+  .fs-controls{
+    position: fixed; left: 50%; transform: translateX(-50%);
+    bottom: max(12px, env(safe-area-inset-bottom)); display:none; z-index:70;
+    background: rgba(0,0,0,.55); backdrop-filter: blur(6px);
+    border: 1px solid #2b2f33; border-radius: 999px; padding: 8px;
+  }
+  .fs-controls.show{ display:flex; gap:8px; align-items:center }
+  .fs-btn{ cursor:pointer; padding:10px 14px; border-radius:999px; border:1px solid #3a3f44;
+    background:#121417; color:#e7e9ea; font-weight:700; font-size:14px; }
+  .fs-btn.primary{ background:var(--accent); color:#0b0f10; border-color:#27c08a }
+
+  /* 3-2-1 overlay (behålls) */
+  .overlay{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:80 }
+  .overlay.show{ display:flex }
+  .countdown{ background:rgba(0,0,0,.6); color:#fff; font-size:24vw; font-weight:900; line-height:1 }
 </style>
 </head>
 <body>
 
-<div id="controls">
-  <div class="control">
-    <label>Lampor:</label>
-    <button onclick="changeLamps(-1)">-</button>
-    <span id="lampCount">15</span>
-    <button onclick="changeLamps(1)">+</button>
+<!-- TOP -->
+<div class="topbar">
+  <div class="topgrid">
+
+    <!-- Stepprare -->
+    <div>
+      <div class="steppers">
+        <div class="stepper" data-field="lamps">
+          <label>Lampor</label>
+          <div class="btn" data-delta="-1">−</div>
+          <div class="val" id="val-lamps">15</div>
+          <div class="btn" data-delta="1">+</div>
+        </div>
+
+        <div class="stepper" data-field="mpl" data-step="0.5">
+          <label>Min/lampa</label>
+          <div class="btn" data-delta="-0.5">−</div>
+          <div class="val" id="val-mpl">2</div>
+          <div class="btn" data-delta="0.5">+</div>
+        </div>
+
+        <div class="stepper" data-field="perRow">
+          <label>Per rad</label>
+          <div class="btn" data-delta="-1">−</div>
+          <div class="val" id="val-perRow">15</div>
+          <div class="btn" data-delta="1">+</div>
+        </div>
+      </div>
+
+      <div class="chips" id="themeChips">
+        <button class="chip active" data-scheme="gyr">Grön→Gul→Röd</button>
+        <button class="chip" data-scheme="rainbow">Regnbåge</button>
+        <button class="chip" data-scheme="white">Vit</button>
+      </div>
+
+      <div class="chips" id="dirChips">
+        <button class="chip active" data-dir="ltr">Vänster→Höger</button>
+        <button class="chip" data-dir="rtl">Höger→Vänster</button>
+        <label class="chip" style="display:flex;align-items:center;gap:8px">
+          <input id="sound" type="checkbox" checked> Ljudsignal
+        </label>
+      </div>
+    </div>
+
+    <!-- Total & start -->
+    <div>
+      <div class="totaltime"><span id="totalTimeDisplay">30</span><small>min</small></div>
+      <div class="startrow">
+        <button class="btn-lg btn-primary" id="startBtn">Starta i fullskärm</button>
+        <button class="btn-lg btn-ghost" id="resetBtn" style="display:none">Nollställ</button>
+      </div>
+    </div>
+
   </div>
-  <div class="control">
-    <label>Min/lampa:</label>
-    <button onclick="changeMinutes(-1)">-</button>
-    <span id="minPerLamp">2</span>
-    <button onclick="changeMinutes(1)">+</button>
-  </div>
-  <div class="control">
-    <label>Färg:</label>
-    <select id="colorMode" onchange="renderLamps()">
-      <option value="ggr">Grön–Gul–Röd</option>
-      <option value="rainbow">Regnbåge</option>
-      <option value="white">Vit</option>
-    </select>
-  </div>
-  <button onclick="startTimer()">Starta</button>
 </div>
 
-<div id="totalTime">Total tid: <span id="totalMin">30</span> min</div>
-
-<div id="lampWrap"></div>
-
-<div id="fullscreenControls" style="display:none;">
-  <button onclick="togglePause()">
-    <span id="pauseText">Pausa</span>
-  </button>
-  <button onclick="exitFullscreen()">Avsluta</button>
+<!-- Innehåll -->
+<div class="wrap">
+  <div class="card">
+    <div class="toprow">
+      <div style="font-weight:800">Visuell Nedräkning</div>
+      <div class="badge" id="panelBadge">15 × 2 min</div>
+    </div>
+    <div id="lampWrap" class="grid-lamps"></div>
+    <div class="clock" id="clock">00:00</div>
+    <div class="progress" title="Total progress"><div id="progressFill"></div></div>
+  </div>
 </div>
+
+<!-- Fullscreen-flyt -->
+<div class="fs-controls" id="fsControls">
+  <button class="fs-btn primary" id="fsPauseBtn">Pausa</button>
+  <button class="fs-btn" id="fsExitBtn">Avsluta fullskärm</button>
+</div>
+
+<!-- 3-2-1 -->
+<div class="overlay" id="countOverlay"><div class="countdown" id="countNum">3</div></div>
 
 <script>
-let lamps = 15;
-let minutesPerLamp = 2;
-let timerInterval;
-let paused = false;
-let currentLamp = 0;
-let colorMode = 'ggr';
+  /* ======= STATE ======= */
+  const state = {
+    lamps: 15, mpl: 2, perRow: 15,
+    scheme:'gyr', direction:'ltr',      // Alltid RADVIS; endast riktning
+    sound:true,
+    running:false, paused:false, finished:false,
+    off:0, elapsedInLampMs:0, stepMs: 2*60*1000,
+    previewTimer:null, tick:null,
+    wakeLock:null, audioCtx:null
+  };
 
-function changeLamps(delta) {
-  lamps = Math.max(1, lamps + delta);
-  document.getElementById('lampCount').textContent = lamps;
-  updateTotal();
-  renderLamps();
-  startPreviewOnce();
-}
-function changeMinutes(delta) {
-  minutesPerLamp = Math.max(1, minutesPerLamp + delta);
-  document.getElementById('minPerLamp').textContent = minutesPerLamp;
-  updateTotal();
-  renderLamps();
-  startPreviewOnce();
-}
-function updateTotal() {
-  document.getElementById('totalMin').textContent = lamps * minutesPerLamp;
-}
-function lampColor(index) {
-  if (colorMode === 'white') return 'white';
-  if (colorMode === 'ggr') {
-    let ratio = index / (lamps - 1);
-    if (ratio < 0.5) {
-      let g = 200;
-      let r = Math.floor(255 * ratio * 2);
-      return `rgb(${r},${g},0)`;
-    } else {
-      let r = 200;
-      let g = Math.floor(200 - (ratio - 0.5) * 2 * 200);
-      return `rgb(${r},${g},0)`;
-    }
+  /* ======= ELEMENTS ======= */
+  const $ = id => document.getElementById(id);
+  const totalTimeDisplay = $('totalTimeDisplay');
+  const lampWrap=$('lampWrap'), clock=$('clock'), progressFill=$('progressFill'), panelBadge=$('panelBadge');
+  const startBtn=$('startBtn'), resetBtn=$('resetBtn');
+  const fsControls=$('fsControls'), fsPauseBtn=$('fsPauseBtn'), fsExitBtn=$('fsExitBtn');
+  const countOverlay=$('countOverlay'), countNum=$('countNum');
+  const soundCb=$('sound');
+
+  /* ======= HELPERS ======= */
+  const clamp=(v,mi,ma)=>Math.max(mi,Math.min(ma,v));
+  function updateStep(){ state.stepMs = Math.max(10, state.mpl * 60 * 1000); }
+  const hueCss=h=>`linear-gradient(180deg, hsl(${h} 90% 60%), hsl(${h} 80% 50%))`;
+  function colorFor(i,total){
+    const t = total<=1 ? 0 : i/(total-1);
+    if(state.scheme==='white') return 'linear-gradient(180deg,#f3f4f6,#d1d5db)';
+    if(state.scheme==='gyr'){ const hue = 120*(1-t); return hueCss(hue); }
+    const hue = 240 + 360*(1-t); return hueCss(hue);
   }
-  if (colorMode === 'rainbow') {
-    let hue = (index / lamps) * 360;
-    return `hsl(${hue},100%,50%)`;
-  }
-  return 'grey';
-}
-function renderLamps(activeCount=lamps) {
-  colorMode = document.getElementById('colorMode').value;
-  let wrap = document.getElementById('lampWrap');
-  wrap.innerHTML = '';
-  for (let i = 0; i < lamps; i++) {
-    let div = document.createElement('div');
-    div.className = 'lamp';
-    div.style.transitionDelay = `${i * 0.05}s`;
-    div.style.background = i < activeCount ? lampColor(i) : '#333';
-    wrap.appendChild(div);
-  }
-}
-function startPreviewOnce() {
-  renderLamps();
-}
-function startTimer() {
-  paused = false;
-  currentLamp = 0;
-  renderLamps(lamps);
-  enterFullscreen();
-  document.getElementById('fullscreenControls').style.display = 'flex';
-  timerInterval = setInterval(() => {
-    if (!paused) {
-      currentLamp++;
-      renderLamps(lamps - currentLamp);
-      if (currentLamp >= lamps) {
-        clearInterval(timerInterval);
+  const dimStyle=base=>`filter:grayscale(60%) brightness(40%) contrast(80%);opacity:.35;box-shadow:inset 0 0 0 1px #3a3a3a;background:${base}`;
+  const fmtMS = ms => { ms=Math.max(0,ms|0); const s=Math.floor(ms/1000), m=Math.floor(s/60), sec=s%60; return String(m).padStart(2,'0')+':'+String(sec).padStart(2,'0'); };
+  function renderTotal(){ totalTimeDisplay.textContent = (state.lamps*state.mpl).toString(); }
+
+  // Alltid RADVIS ordning
+  function buildOrderMap(){
+    const cols = clamp(state.perRow,1,state.lamps);
+    const rows = Math.ceil(state.lamps/cols);
+    const order = [];
+    const ltr = state.direction==='ltr';
+    for(let r=0;r<rows;r++){
+      for(let c=ltr?0:cols-1; ltr?c<cols:c>=0; c+=ltr?1:-1){
+        const idx=r*cols+c; if(idx<state.lamps) order.push(idx);
       }
     }
-  }, minutesPerLamp * 60 * 1000);
-}
-function togglePause() {
-  paused = !paused;
-  document.getElementById('pauseText').textContent = paused ? 'Fortsätt' : 'Pausa';
-}
-function enterFullscreen() {
-  document.body.classList.add('fullscreen-mode');
-  if (document.documentElement.requestFullscreen) {
-    document.documentElement.requestFullscreen();
+    const map=new Map(); order.forEach((idx,pos)=>map.set(idx,pos)); return map;
   }
-}
-function exitFullscreen() {
-  document.body.classList.remove('fullscreen-mode');
-  clearInterval(timerInterval);
-  document.getElementById('fullscreenControls').style.display = 'none';
-  if (document.exitFullscreen) {
-    document.exitFullscreen();
-  }
-}
-window.onload = function() {
-  updateTotal();
-  renderLamps();
-  startPreviewOnce();
-};
-</script>
+  let orderMap = buildOrderMap();
 
+  function renderLamps(offCount){
+    const cols = clamp(state.perRow,1,state.lamps);
+    document.documentElement.style.setProperty('--cols', cols);
+    lampWrap.style.gridTemplateColumns = `repeat(${cols}, minmax(0, 1fr))`;
+    lampWrap.innerHTML = '';
+    for(let i=0;i<state.lamps;i++){
+      const base = colorFor(i, state.lamps);
+      const pos = orderMap.get(i) ?? i;
+      const isOff = pos < offCount;
+      const div = document.createElement('div');
+      div.className = 'lamp' + (isOff?' off':'');
+      /* mjuk svall-effekt i ordningsföljd */
+      div.style.transitionDelay = (pos*0.02)+'s';
+      div.style = (isOff ? dimStyle(base) : `background:${base}`) + ';' + div.style.cssText;
+      lampWrap.appendChild(div);
+    }
+  }
+
+  function renderClockAndProgress(){
+    const totalMs = state.lamps*state.stepMs;
+    const elapsedMs = state.off*state.stepMs + state.elapsedInLampMs;
+    const remainingMs = totalMs - elapsedMs;
+    clock.textContent = fmtMS(remainingMs);
+    const ratio = totalMs>0 ? Math.min(1, Math.max(0, elapsedMs/totalMs)) : 0;
+    progressFill.style.width = (ratio*100).toFixed(3) + '%';
+  }
+
+  function renderPanel(){
+    panelBadge.textContent = `${state.lamps} × ${state.mpl} min`;
+    renderLamps(state.off);
+    renderClockAndProgress();
+    resetBtn.style.display = (state.running || state.finished) ? 'inline-block' : 'none';
+    fsPauseBtn.textContent = state.paused ? 'Fortsätt' : 'Pausa';
+  }
+
+  // Demo en gång per ändring/vid start
+  function startPreviewOnce(){
+    stopPreview(); state.off = 0; renderPanel();
+    state.previewTimer = setInterval(()=>{
+      state.off += 1; renderPanel();
+      if(state.off >= state.lamps){ stopPreview(); state.off = 0; renderPanel(); }
+    }, 120);
+  }
+  function stopPreview(){ if(state.previewTimer){ clearInterval(state.previewTimer); state.previewTimer=null; } }
+
+  // Audio
+  function beep(){
+    try{
+      const ctx = state.audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      state.audioCtx = ctx;
+      const o = ctx.createOscillator(), g = ctx.createGain();
+      o.type='sine'; o.frequency.value=880; g.gain.value=0.0001;
+      o.connect(g); g.connect(ctx.destination); o.start();
+      const now=ctx.currentTime;
+      g.gain.exponentialRampToValueAtTime(0.2, now + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 1.2);
+      o.stop(now + 1.25);
+    }catch(e){}
+  }
+
+  // Wake & FS
+  async function requestWake(){ try{ if('wakeLock' in navigator){ state.wakeLock = await navigator.wakeLock.request('screen'); } }catch(e){} }
+  async function releaseWake(){ try{ await state.wakeLock?.release?.(); state.wakeLock=null; }catch(e){} }
+  async function enterFs(){
+    try{
+      await document.documentElement.requestFullscreen?.();
+      if (screen.orientation?.lock) { try{ await screen.orientation.lock('landscape'); }catch(e){} }
+    }catch(e){}
+  }
+  async function exitFs(){ try{ if(document.fullscreenElement) await document.exitFullscreen(); }catch(e){} }
+
+  // 3-2-1 overlay
+  function showCountdown(){
+    countNum.textContent='3';
+    countOverlay.classList.add('show');
+    let i=3;
+    const t = setInterval(()=>{
+      i--; countNum.textContent= i>0 ? String(i) : 'Start!';
+      if(i<=0){ clearInterval(t); setTimeout(()=>countOverlay.classList.remove('show'), 400); }
+    }, 500);
+  }
+
+  // Timer
+  function startTimer(){
+    if(state.tick) clearInterval(state.tick);
+    state.tick = setInterval(()=>{
+      if(!state.running || state.finished || state.paused) return;
+      state.elapsedInLampMs += 200;
+      if(state.elapsedInLampMs >= state.stepMs){
+        state.elapsedInLampMs -= state.stepMs;
+        state.off += 1;
+        if(state.off >= state.lamps){
+          state.finished = true; state.running = false;
+          if(state.sound) beep();
+        }
+      }
+      renderPanel();
+    }, 200);
+  }
+  function stopTimer(){ if(state.tick){ clearInterval(state.tick); state.tick=null; } }
+
+  /* ======= UI EVENTS ======= */
+  // Tema
+  document.getElementById('themeChips').addEventListener('click', (e)=>{
+    const b = e.target.closest('.chip'); if(!b) return;
+    state.scheme = b.dataset.scheme;
+    document.querySelectorAll('#themeChips .chip').forEach(x=>x.classList.toggle('active', x===b));
+    updateStep(); renderTotal(); orderMap=buildOrderMap(); renderPanel(); startPreviewOnce();
+  });
+
+  // Riktning
+  document.getElementById('dirChips').addEventListener('click', (e)=>{
+    const b = e.target.closest('.chip'); if(!b) return;
+    const dir = b.dataset.dir;
+    if(!dir) return;
+    state.direction = dir;
+    document.querySelectorAll('#dirChips .chip[data-dir]').forEach(x=>x.classList.toggle('active', x===b));
+    orderMap=buildOrderMap(); renderPanel(); startPreviewOnce();
+  });
+
+  // Ljud
+  soundCb.addEventListener('change', ()=>{ state.sound = soundCb.checked; });
+
+  // Stepprare
+  function haptic(ms=20){ if(navigator.vibrate) try{ navigator.vibrate(ms) }catch{} }
+  document.querySelectorAll('.stepper').forEach(step=>{
+    step.addEventListener('click', (e)=>{
+      const btn = e.target.closest('.btn'); if(!btn) return;
+      const field = step.getAttribute('data-field');
+      const delta = parseFloat(btn.getAttribute('data-delta'));
+      let val = state[field];
+
+      if(field==='mpl'){
+        val = Math.round((val + delta)*2)/2; // 0.5-steg
+        val = clamp(val, 0.5, 60);
+      }else if(field==='lamps'){
+        val = clamp(val + delta, 5, 120);
+        state.perRow = Math.min(state.perRow, val);
+      }else if(field==='perRow'){
+        val = clamp(val + delta, 1, Math.max(1,state.lamps));
+      }
+      state[field] = val;
+
+      // uppdatera UI-värden
+      document.getElementById('val-lamps').textContent = state.lamps;
+      document.getElementById('val-mpl').textContent   = state.mpl;
+      document.getElementById('val-perRow').textContent= state.perRow;
+
+      updateStep(); renderTotal(); orderMap=buildOrderMap(); renderPanel(); startPreviewOnce();
+      haptic();
+    });
+  });
+
+  // Start / Reset
+  startBtn.addEventListener('click', async ()=>{
+    enterFs(); requestWake();
+    document.body.classList.add('fullscreen-mode');
+    fsControls.classList.add('show');
+    showCountdown();
+
+    stopPreview();
+    state.running = true; state.finished=false; state.paused=false;
+    state.off = 0; state.elapsedInLampMs = 0;  // alla tända vid start
+    renderPanel(); startTimer();
+  });
+
+  resetBtn.addEventListener('click', async ()=>{
+    document.body.classList.remove('fullscreen-mode');
+    fsControls.classList.remove('show');
+    state.running=false; state.finished=false; state.paused=false;
+    state.off=0; state.elapsedInLampMs=0;
+    stopTimer(); await releaseWake(); await exitFs();
+    updateStep(); renderTotal(); orderMap=buildOrderMap(); renderPanel(); startPreviewOnce();
+  });
+
+  // Fullskärm: pausa/avsluta
+  fsPauseBtn.addEventListener('click', ()=>{
+    state.paused = !state.paused;
+    fsPauseBtn.textContent = state.paused ? 'Fortsätt' : 'Pausa';
+  });
+  fsExitBtn.addEventListener('click', async ()=>{
+    document.body.classList.remove('fullscreen-mode');
+    fsControls.classList.remove('show');
+    await releaseWake(); await exitFs();
+  });
+
+  // Tangenter (desktop)
+  window.addEventListener('keydown', async (e)=>{
+    if(e.code==='Space'){
+      if(state.running && !state.finished){
+        state.paused = !state.paused;
+        fsPauseBtn.textContent = state.paused ? 'Fortsätt' : 'Pausa';
+        e.preventDefault();
+      }
+    } else if(e.key==='Escape'){
+      if(document.body.classList.contains('fullscreen-mode')){
+        document.body.classList.remove('fullscreen-mode');
+        fsControls.classList.remove('show');
+        await releaseWake(); await exitFs();
+      }
+    }
+  });
+
+  // Init – demo direkt
+  function init(){
+    document.getElementById('val-lamps').textContent = state.lamps;
+    document.getElementById('val-mpl').textContent   = state.mpl;
+    document.getElementById('val-perRow').textContent= state.perRow;
+    updateStep(); renderTotal();
+    orderMap = buildOrderMap();
+    renderPanel();
+    startPreviewOnce(); // demo direkt
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', init);
+  }else{
+    init();
+  }
+</script>
 </body>
 </html>
